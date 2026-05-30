@@ -9,6 +9,9 @@ logs
 .env.development
 .env.production
 
+# direnv (holds the per-org SERVERLESS_ACCESS_KEY — never commit)
+.envrc
+
 # Runtime data
 pids
 *.pid

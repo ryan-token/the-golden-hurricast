@@ -144,6 +144,27 @@ table {
   border-radius: .3rem;
 }
 
+/* Home jumbotron social icons: keep them on a single line, shrinking slightly
+   on narrow phones (overrides the per-icon inline sizing on small screens). */
+.jumbotron-social-icons {
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  .jumbotron-social-icons a {
+    margin-right: 6px !important;
+  }
+  .jumbotron-social-icons img {
+    height: 28px !important;
+    width: 28px !important;
+  }
+  /* Discord glyph is wider than tall — preserve its aspect ratio. */
+  .jumbotron-social-icons img[alt='Discord icon'] {
+    height: 21px !important;
+    width: 28px !important;
+  }
+}
+
 .hidden-select {
   -webkit-appearance: none;
   -moz-appearance: none;

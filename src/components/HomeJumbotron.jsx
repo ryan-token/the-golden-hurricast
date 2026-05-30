@@ -17,7 +17,7 @@ const HomeJumbotron = () => {
             
             <br />
             
-            <ButtonToolbar>
+            <ButtonToolbar className='jumbotron-social-icons'>
               <a
                 style={{ marginRight: '10px' }}
                 rel='noopener noreferrer'
@@ -74,7 +74,18 @@ const HomeJumbotron = () => {
                   <img src='/brand_icons/x.png' alt='X icon' style={{ height: '35px', width: '35px' }} />
                   </picture>
               </a>
-    
+
+              <a
+                style={{marginRight: '10px'}}
+                rel='noopener noreferrer'
+                target='_blank'
+                href='https://bsky.app/profile/thegoldenhurricast.com'
+              >
+                <picture>
+                  <img src='/brand_icons/bluesky.svg' alt='Bluesky icon' style={{ height: '35px', width: '35px' }} />
+                </picture>
+              </a>
+
               <a
                 style={{ marginRight: '10px' }}
                 rel='noopener noreferrer'

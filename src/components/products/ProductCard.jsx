@@ -1,6 +1,4 @@
 import React, { useState } from 'react'
-import getStripe from '../../utils/stripejs'
-import { v4 as uuidv4 } from 'uuid'
 
 const cardStyles = {
 	display: 'flex',
@@ -69,16 +67,14 @@ const ProductCard = ({ product }) => {
 	
 	  try {
 		const productId = product.id;
-		const orderId = uuidv4();
+		const orderId = crypto.randomUUID();
 		const priceId = new FormData(event.target).get('priceSelect');
 		const quantity = new FormData(event.target).get('quantitySelect');
-	
-		const stripe = await getStripe();
-	
+
 		const response = await fetch('/api/create-stripe-checkout-session', {
 		  method: 'POST',
 		  headers: {
-			'Content-Type': 'application/json'  // Add this header
+			'Content-Type': 'application/json'
 		  },
 		  body: JSON.stringify({
 			priceId,
@@ -87,22 +83,15 @@ const ProductCard = ({ product }) => {
 			orderId,
 		  }),
 		});
-	
-		// Log the response to check what we're getting back
+
 		const data = await response.json();
-	
-		if (!data.sessionId) {
-		  throw new Error('No sessionId received from server');
+
+		if (!data.url) {
+		  throw new Error('No checkout URL received from server');
 		}
-	
-		const { error } = await stripe.redirectToCheckout({ 
-		  sessionId: data.sessionId  // Make sure we're using the correct property
-		});
-	
-		if (error) {
-		  console.warn('Redirect Error:', error);
-		  setLoading(false);
-		}
+
+		// Send the customer to Stripe's hosted Checkout page.
+		window.location.href = data.url;
 	  } catch (error) {
 		console.error('Error:', error);
 		setLoading(false);

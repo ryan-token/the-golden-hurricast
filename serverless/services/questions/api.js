@@ -14,8 +14,7 @@ const submitQuestion = async (event, context) => {
     body: {}
   }
   
-  const ksuidString = JSON.stringify(await KSUID.random())
-  const questionId = ksuidString.replace(/['"]+/g, '')
+  const questionId = (await KSUID.random()).string
   const questionText = eventBody.question
   const name = eventBody.name
   const submissionDate = new Date().toISOString()

@@ -96,6 +96,15 @@ const AboutLayout = () => {
               @GoldenHurricast
           </a>
             <br />
+            Bluesky:{' '}
+            <a
+              rel='noopener noreferrer'
+              target='_blank'
+              href='https://bsky.app/profile/thegoldenhurricast.com'
+            >
+              @thegoldenhurricast.com
+          </a>
+            <br />
             Email:{' '}
             <a href='mailto:thegoldenhurricast@gmail.com'>
               TheGoldenHurricast@gmail.com

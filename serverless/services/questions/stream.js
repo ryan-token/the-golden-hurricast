@@ -1,7 +1,6 @@
 'use strict'
 
 const { unmarshall } = require('@aws-sdk/util-dynamodb')
-const fetch = require('node-fetch')
 
 const forwardQuestionToSlack = async (event) => {
 	console.log('event:', JSON.stringify(event, null, 2))

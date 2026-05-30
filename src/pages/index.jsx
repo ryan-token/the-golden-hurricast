@@ -7,9 +7,22 @@ import Col from 'react-bootstrap/Col'
 import NavigationBar from '../components/NavigationBar'
 import HomeJumbotron from '../components/HomeJumbotron'
 import Seo from '../components/seo'
-import { TwitterTimelineEmbed, TwitterFollowButton } from 'react-twitter-embed'
+import Socials from '../components/Socials'
 
 import 'bootstrap/dist/css/bootstrap.min.css'
+
+// Screen-reader-only: present for assistive tech (and the rel="me" crawler) but visually hidden.
+const visuallyHidden = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+}
 
 const HomeLayout = ({data}) => {
   const { edges } = data.allMarkdownRemark
@@ -145,20 +158,10 @@ const HomeLayout = ({data}) => {
               <br /> <br />
             
               <Row>
-                <h4>X Feed</h4>
+                <h4>Socials</h4>
               </Row>
               <hr />
-              <Row>
-                <TwitterFollowButton screenName={'GoldenHurricast'} />
-              </Row>
-              <br />
-              <Row style={{ margin: '0px'}}>
-                <TwitterTimelineEmbed
-                  sourceType='profile'
-                  screenName='GoldenHurricast'
-                  options={{ height: 500, width: 500 }}
-                />
-              </Row>
+              <Socials />
             </Col>
           </Row>
         </Container>
@@ -169,14 +172,17 @@ const HomeLayout = ({data}) => {
         async
       ></script>
       
-      <a rel='me' href='https://indieweb.social/@ryantoken'></a>
+      {/* IndieWeb / Mastodon rel="me" identity verification link (visually hidden) */}
+      <a rel='me' href='https://indieweb.social/@ryantoken'>
+        <span style={visuallyHidden}>The Golden Hurricast on Mastodon</span>
+      </a>
     </div>
   )
 }
 
 export const query = graphql`
    query LatestBlogQuery {
-     allMarkdownRemark(sort: { order: DESC, fields: [frontmatter___sortDate] }, limit: 1) {
+     allMarkdownRemark(sort: { frontmatter: { sortDate: DESC } }, limit: 1) {
        edges {
          node {
            id

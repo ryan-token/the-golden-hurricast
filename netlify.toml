@@ -1,7 +1,7 @@
 [build]
   command = "gatsby build"
   publish = "public"
-  environment = { NODE_VERSION = "22" }
+  environment = { NODE_VERSION = "24" }
 
 [[plugins]]
   package = "netlify-plugin-image-optim"

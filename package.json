@@ -14,10 +14,9 @@
     "test": "echo \"Write tests! -> https://gatsby.dev/unit-testing\" && exit 1"
   },
   "dependencies": {
-    "@stripe/stripe-js": "^8.8.0",
     "bootstrap": "^5.3.8",
     "disqus-react": "^1.1.7",
-    "dotenv": "^17.3.1",
+    "dotenv": "^17.4.2",
     "gatsby": "^5.16.1",
     "gatsby-cli": "^5.16.0",
     "gatsby-plugin-image": "^3.16.0",
@@ -27,15 +26,13 @@
     "gatsby-source-stripe": "^4.0.0",
     "gatsby-transformer-remark": "^6.16.0",
     "gatsby-transformer-sharp": "^5.16.0",
-    "react": "^18.3.1",
+    "react": "^19.2.6",
     "react-bootstrap": "^2.10.10",
-    "react-dom": "^18.3.1",
-    "react-twitter-embed": "^4.0.4",
-    "stripe": "^20.4.0",
-    "uuid": "^13.0.0"
+    "react-dom": "^19.2.6",
+    "stripe": "^22.2.0"
   },
   "devDependencies": {
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.3"
   },
   "repository": {
     "type": "git",

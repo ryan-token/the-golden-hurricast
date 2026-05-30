@@ -43,53 +43,48 @@ const createTagPages = (createPage, posts) => {
     })
 }
 
-exports.createPages = (({graphql, actions}) => {
+exports.createPages = async ({ graphql, actions, reporter }) => {
     const { createPage } = actions
+    const blogPostTemplate = path.resolve('src/templates/blogPost.jsx')
 
-    return new Promise((resolve, reject) => {
-        const blogPostTemplate = path.resolve('src/templates/blogPost.jsx')
-        
-        resolve(
-            graphql (
-                `
-                    query {
-                        allMarkdownRemark (
-                            sort: { order: ASC, fields: [frontmatter___sortDate]}
-                        ) {
-                            edges {
-                                node {
-                                    frontmatter {
-                                        path
-                                        title
-                                        tags
-                                        sortDate
-                                    }
-                                }
-                            }
+    const result = await graphql(`
+        query {
+            allMarkdownRemark(
+                sort: { frontmatter: { sortDate: ASC } }
+            ) {
+                edges {
+                    node {
+                        frontmatter {
+                            path
+                            title
+                            tags
+                            sortDate
                         }
                     }
-                `
-            ).then(result => {
-                const posts = result.data.allMarkdownRemark.edges
+                }
+            }
+        }
+    `)
 
-                createTagPages(createPage, posts)
+    if (result.errors) {
+        reporter.panicOnBuild('Error loading markdown posts', result.errors)
+        return
+    }
 
-                posts.forEach (({node}, index) => {
-                    const path = node.frontmatter.path
-                    createPage({
-                        path,
-                        component: blogPostTemplate,
-                        context: {
-                            pathSlug: path,
-                            prev: index === 0 ? null : posts[index - 1].node,
-                            next: index === (posts.length - 1) ? null : posts[index + 1].node
-                        }
-                    })
+    const posts = result.data.allMarkdownRemark.edges
 
-                    resolve()
-                })
-            })
-        )
-    
+    createTagPages(createPage, posts)
+
+    posts.forEach(({ node }, index) => {
+        const postPath = node.frontmatter.path
+        createPage({
+            path: postPath,
+            component: blogPostTemplate,
+            context: {
+                pathSlug: postPath,
+                prev: index === 0 ? null : posts[index - 1].node,
+                next: index === (posts.length - 1) ? null : posts[index + 1].node
+            }
+        })
     })
-})
+}

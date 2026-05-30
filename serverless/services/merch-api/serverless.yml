@@ -20,10 +20,7 @@ provider:
   httpApi:
     shouldStartNameWithService: true
     cors:
-      allowedOrigins:
-        - https://thegoldenhurricast.com
-        - https://www.thegoldenhurricast.com
-        - https://deploy-preview-28--thegoldenhurricast.netlify.app
+      allowedOrigins: ${param:corsOrigins} # stage-specific; see params below
       allowedHeaders:
         - Content-Type
         - Authorization
@@ -47,10 +44,19 @@ provider:
             - Fn::GetAtt: [ OrdersTable, Arn ]
   
 params:
+  default:
+    # Prod-safe origins. Used by every stage unless overridden below.
+    corsOrigins:
+      - https://thegoldenhurricast.com
+      - https://www.thegoldenhurricast.com
   prod:
     ordersTable: Orders
   dev:
     ordersTable: Orders-dev
+    # Local Gatsby dev only talks to the dev backend.
+    corsOrigins:
+      - http://localhost:8000 # gatsby develop
+      - http://localhost:9000 # gatsby serve
 
 functions:
   calculateRemainingItems:
