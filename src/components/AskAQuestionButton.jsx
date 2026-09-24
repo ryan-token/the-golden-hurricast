@@ -3,7 +3,7 @@ import Button from 'react-bootstrap/Button'
 import Modal from 'react-bootstrap/Modal'
 import Form from 'react-bootstrap/Form'
 import Toast from 'react-bootstrap/Toast'
-import { submitQuestionToTable } from '../api/questions-api'
+import { submitQuestion } from '../services/questions-api'
 
 const AskAQuestionButton = () => {
 	const [showModal, setShowModal] = useState(false)
@@ -19,6 +19,7 @@ const AskAQuestionButton = () => {
 	const handleCloseModal = () => {
 		setShowSubmittedQuestionToast(false)
 		setShowInvalidQuestionToast(false)
+		setShowSubmissionErrorToast(false)
 		setShowModal(false)
 		setShowSubmitButton(true)
 	}
@@ -27,31 +28,23 @@ const AskAQuestionButton = () => {
 		const textareaRegex = /^(?!.*(<|>|&|")).{1,5000}$/
 		const nameRegex = /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/
 		if (textareaRegex.test(question) && (name === '' || nameRegex.test(name))) {
-			const questionData = {
-				question: question,
-				name: name
-			}
-			
-			// make http post here
-			let response
 			try {
-				response = await submitQuestionToTable(questionData)
-			} catch(err) {
+				await submitQuestion({ question, name })
+			} catch (err) {
 				console.error('Error submitting question:', err)
-			}
-			
-			if (response && !('error' in JSON.parse(JSON.stringify(response)))) {
-				setShowSubmitButton(false)
-				setQuestion('')
-				setName('')
-				setShowInvalidQuestionToast(false)
-				setShowSubmittedQuestionToast(true)
-				setTimeout(() => {
-					handleCloseModal()
-				}, 6000)
-			} else {
 				setShowSubmissionErrorToast(true)
+				return
 			}
+
+			setShowSubmitButton(false)
+			setQuestion('')
+			setName('')
+			setShowInvalidQuestionToast(false)
+			setShowSubmissionErrorToast(false)
+			setShowSubmittedQuestionToast(true)
+			setTimeout(() => {
+				handleCloseModal()
+			}, 6000)
 		} else {
 			setShowInvalidQuestionToast(true)
 		}
@@ -71,10 +64,7 @@ const AskAQuestionButton = () => {
 					Submit a question and we'll do our best to answer it on an upcoming show. Feel free to ask anonymously if you'd prefer us not to mention your name.
 					<br /> <br />
 					<Form>
-						<Form.Group
-							className='mb-3'
-							controlid='form.ControlTextarea'
-						>
+						<Form.Group className='mb-3' controlId='askQuestionText'>
 							<Form.Label><strong>What is your question for us?</strong></Form.Label>
 							<Form.Control 
 								required
@@ -85,11 +75,10 @@ const AskAQuestionButton = () => {
 							/>
 						</Form.Group>
 						
-						<Form.Group className='mb-3' controlid='exampleForm.ControlInput1'>
+						<Form.Group className='mb-3' controlId='askQuestionName'>
 							<Form.Label><strong>What is your name?</strong></Form.Label>
 							<Form.Control
 								type='text'
-								controlid='form.NameTextArea'
 								value={name}
 								placeholder='Your Name'
 								onChange={(event) => {setName(event.target.value)}}
@@ -122,7 +111,7 @@ const AskAQuestionButton = () => {
 							<strong className='me-auto'>Error Submitting Question</strong>
 						</Toast.Header>
 						<Toast.Body>
-							⛔️ There was an error submitting your question. Sorry about that. If you'd like to submit your question over email, send one to <a href="mailto:thegoldenhurricast@gmail.com?subject=Listener Question">thegoldenhurricast.com</a>
+							⛔️ There was an error submitting your question. Sorry about that. If you'd like to submit your question over email, send one to <a href="mailto:thegoldenhurricast@gmail.com?subject=Listener Question">thegoldenhurricast@gmail.com</a>
 						</Toast.Body>
 					</Toast>
 					

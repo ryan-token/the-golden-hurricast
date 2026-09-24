@@ -144,24 +144,58 @@ table {
   border-radius: .3rem;
 }
 
+/* "Listen on" badges: uniform height, wrapping cleanly at any viewport width. */
+.listen-on-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.listen-on-badges img {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+/* Apple Podcasts "large" show player: 16:9, capped at Apple's 660px max width.
+   The min-height keeps the "Latest Episode" button visible on narrow phones. */
+.apple-podcasts-embed {
+  display: block;
+  width: 100%;
+  max-width: 660px;
+  aspect-ratio: 16 / 9;
+  min-height: 175px;
+  margin: 0 auto;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: transparent;
+}
+
 /* Home jumbotron social icons: keep them on a single line, shrinking slightly
-   on narrow phones (overrides the per-icon inline sizing on small screens). */
+   on narrow phones. */
 .jumbotron-social-icons {
   flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.jumbotron-social-icons img {
+  display: block;
 }
 
 @media (max-width: 575.98px) {
-  .jumbotron-social-icons a {
-    margin-right: 6px !important;
+  .jumbotron-social-icons {
+    gap: 6px;
   }
   .jumbotron-social-icons img {
-    height: 28px !important;
-    width: 28px !important;
+    height: 28px;
+    width: 28px;
   }
   /* Discord glyph is wider than tall — preserve its aspect ratio. */
   .jumbotron-social-icons img[alt='Discord icon'] {
-    height: 21px !important;
-    width: 28px !important;
+    height: 21px;
   }
 }
 

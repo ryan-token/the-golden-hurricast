@@ -1,61 +1,36 @@
 import React from 'react'
 import Container from 'react-bootstrap/Container'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
 import AskAQuestionButton from '../components/AskAQuestionButton'
 
+// Apple's badge is the official one from Apple Marketing Tools (embedded icon downscaled
+// to 128px); the rest are Podlink's matching dark badges: https://github.com/TeamPodlink/badges
+const PLATFORMS = [
+  { name: 'Apple Podcasts', badge: 'listen-on-apple-podcasts.svg', url: 'https://podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?itscg=30200&itsct=podcast_box&ls=1&mttnsubad=1435008302' },
+  { name: 'Spotify', badge: 'listen-on-spotify.svg', url: 'https://open.spotify.com/show/16ik0AuBrpVBfWn73jlJio' },
+  { name: 'Overcast', badge: 'listen-on-overcast.svg', url: 'https://overcast.fm/itunes1435008302/the-golden-hurricast' },
+  { name: 'Pocket Casts', badge: 'listen-on-pocket-casts.svg', url: 'https://pca.st/podcast/eba6ed30-9102-0136-7b92-27f978dac4db' },
+  { name: 'Castro', badge: 'listen-on-castro.svg', url: 'https://castro.fm/podcast/56521e78-b84b-429b-a580-073bd42d97a7' },
+  { name: 'Goodpods', badge: 'listen-on-goodpods.svg', url: 'https://goodpods.com/podcasts/the-golden-hurricast-185396' },
+]
+
 const PodcastJumbotron = () => {
-    return ( 
+    return (
       <div className='jumbotron'>
         <Container className='container_style'>
             <h1>The Golden Hurricast</h1>
             <p style={{ fontSize: '18px' }}>
                 A weekly podcast covering Golden Hurricane athletics at The University of Tulsa.
             </p>
-            
+
             <AskAQuestionButton />
-            
-            <br />
-            <Row md={12}>
-                <Col xs={6} xl={2}>
-                    <a rel='noopener noreferrer' target='_blank' href='https://podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?mt=2'>
-                        <img src='/listenOnX/listenOn_Apple.svg' alt='Listen on Apple Podcasts' width='139px'/>
+
+            <div className='listen-on-badges'>
+                {PLATFORMS.map(({ name, badge, url }) => (
+                    <a key={name} rel='noopener noreferrer' target='_blank' href={url}>
+                        <img src={`/listenOnX/${badge}`} alt={`Listen on ${name}`} height='40' />
                     </a>
-                </Col>
-                <br /><br />
-                <Col xs={6} xl={2}>
-                    <a rel='noopener noreferrer' target='_blank' href='https://open.spotify.com/show/16ik0AuBrpVBfWn73jlJio'>
-                        <img src='/listenOnX/listenOn_Spotify.svg' alt='Listen on Spotify' width='139px'/>
-                    </a>
-                </Col>
-                <br /> <br />
-                <Col xs={6} xl={2}>
-                    <a rel='noopener noreferrer' target='_blank' href='https://overcast.fm/itunes1435008302/the-golden-hurricast'>
-                        <img src='/listenOnX/listenOn_Overcast.svg' alt='Listen on Overcast' width='139px'/>
-                    </a>
-                </Col>
-                <br /> <br />
-                <Col xs={6} xl={2}>
-                    <a rel='noopener noreferrer' target='_blank' href='https://pca.st/podcast/eba6ed30-9102-0136-7b92-27f978dac4db'>
-                        <img src='/listenOnX/listen-on-pocket-casts.svg' alt='Listen on Pocket Casts' width='139px'/>
-                    </a>
-                </Col>
-                <br /> <br />
-                <Col xs={6} xl={2}>
-                    <a rel='noopener noreferrer' target='_blank' href='https://castro.fm/podcast/56521e78-b84b-429b-a580-073bd42d97a7'>
-                        <img src='/listenOnX/listenOn_Castro.svg' alt='Listen on Castro' width='139px'/>
-                    </a>
-                </Col>
-                <br /><br />
-                <Col xs={6} xl={2}>
-                    <a href="https://goodpods.com/podcasts/the-golden-hurricast-185396">
-                      <img src="https://storage.googleapis.com/goodpods-images-bucket/badges/generic-badge-4.svg" alt="listen to The  Golden Hurricast podcast on goodpods" width='139px' />
-                    </a>
-                    {/* <a rel='noopener noreferrer' target='_blank' href='https://pca.st/DTV0'>
-                        <img src='/listenOnX/listenOn_PocketCasts.svg' alt='Listen on Pocket Casts' width='139px'/>
-                    </a> */}
-                </Col>
-            </Row>
+                ))}
+            </div>
         </Container>
       </div>
     )
