@@ -26,11 +26,11 @@ const AllTagsTemplate = ({pageContext}) => {
           <hr />
 
           <ul>
-            {tags.map((tagName, index) => {
+            {tags.map(tagName => {
               return (
-                <li key={index}>
+                <li key={tagName}>
                   <Link style={{ textDecoration: 'none' }} className='blog_title'
-                    to={`${tagName}`}
+                    to={`/tags/${tagName}`}
                   >
                     {tagName}
                   </Link>

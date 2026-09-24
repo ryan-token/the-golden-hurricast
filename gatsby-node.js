@@ -88,3 +88,12 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
         })
     })
 }
+
+exports.onCreateWebpackConfig = ({ actions }) => {
+    // webpack's persistent cache logs a "Serializing big strings" hint for large vendor files
+    // (React's builds, Bootstrap's CSS). It isn't actionable, so keep only real problems.
+    // This only affects webpack's infrastructure logger; compilation warnings/errors still show.
+    actions.setWebpackConfig({
+        infrastructureLogging: { level: 'error' },
+    })
+}

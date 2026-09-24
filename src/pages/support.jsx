@@ -102,13 +102,14 @@ const SupportLayout = () => {
 
 export default SupportLayout
 
-export const Head = () => {
+export const Head = ({ location }) => {
   return (
     <>
       <Seo
         title={'Support The Golden Hurricast'}
         description={'We do all of this for free and for the love of TU athletics'}
         image={'/logo-white.jpg'}
+        pathname={location.pathname}
       />
       <meta charSet='utf-8' />
       <title>TGH | Support Us</title>

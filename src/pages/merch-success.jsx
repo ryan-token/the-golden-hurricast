@@ -2,26 +2,12 @@ import React, { useEffect } from 'react'
 import Button from 'react-bootstrap/Button'
 import NavigationBar from '../components/NavigationBar'
 import Container from 'react-bootstrap/Container'
-import { addOrderToTable } from '../api/merch-api'
+import { addOrderToTable } from '../services/merch-api'
 
 const MerchLayout = () => {
-	const isBrowser = () => typeof window !== 'undefined'
-	
 	useEffect(() => {
-		if (!isBrowser()) {
-			return ( <div> </div>)
-			
-		} else {
-			var params = new Proxy(new URLSearchParams(window.location.search), {
-				get: (searchParams, prop) => searchParams.get(prop),
-			})
-			
-			let productId = params.productId
-			let orderId = params.orderId
-			let quantity = params.quantity
-			
-			addOrderToTable(productId, orderId, quantity)	
-		}
+		const params = new URLSearchParams(window.location.search)
+		addOrderToTable(params.get('productId'), params.get('orderId'), params.get('quantity'))
 	}, [])
 	
 	return (

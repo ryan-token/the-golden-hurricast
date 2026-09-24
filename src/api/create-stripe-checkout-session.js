@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       mode: 'payment',
       line_items: [{
         price: priceId,
-        quantity: parseInt(quantity),
+        quantity: Number.parseInt(quantity, 10),
       }],
       shipping_address_collection: {
         allowed_countries: ['US'],

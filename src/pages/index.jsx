@@ -8,8 +8,7 @@ import NavigationBar from '../components/NavigationBar'
 import HomeJumbotron from '../components/HomeJumbotron'
 import Seo from '../components/seo'
 import Socials from '../components/Socials'
-
-import 'bootstrap/dist/css/bootstrap.min.css'
+import ApplePodcastsEmbed from '../components/ApplePodcastsEmbed'
 
 // Screen-reader-only: present for assistive tech (and the rel="me" crawler) but visually hidden.
 const visuallyHidden = {
@@ -65,7 +64,9 @@ const HomeLayout = ({data}) => {
                 </p>
               </Row>
               <Row>
-                <iframe title='Apple Podcasts Embed' src='https://embed.podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?itsct=podcast_box_player&amp;itscg=30200&amp;ls=1&amp;theme=light' height='450px' frameBorder='0' sandbox='allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation' allow='autoplay *; encrypted-media *; clipboard-write' style={{display: 'flex', marginLeft: 'auto', marginRight: 'auto', width: '100%', maxWidth: '660px', overflow: 'hidden', borderRadius: '10px', backgroundColor: 'transparent'}}></iframe>
+                <div>
+                  <ApplePodcastsEmbed />
+                </div>
               </Row>
               <br /> <br />
               <Row>
@@ -82,7 +83,7 @@ const HomeLayout = ({data}) => {
                 <h6 style={{marginBottom: '1rem'}}>Latest blog post:</h6>
               </Row>
               <Row>
-                <div key={Math.random()} className='pull-left'>
+                <div>
                   <Container style={{padding: '0px'}}>
                       <Link
                         style={{
@@ -91,10 +92,7 @@ const HomeLayout = ({data}) => {
                         
                         to={`${frontmatter.path}`}
                       >
-                        <div
-                          key={frontmatter.path}
-                          className='floating_still_blog'
-                        >
+                        <div className='floating_still_blog'>
                           <p className='blog_title'>
                             {frontmatter.title}
                           </p>
@@ -166,12 +164,6 @@ const HomeLayout = ({data}) => {
           </Row>
         </Container>
       </div>
-      <script
-        id='dsq-count-scr'
-        src='//thegoldenhurricast.disqus.com/count.js'
-        async
-      ></script>
-      
       {/* IndieWeb / Mastodon rel="me" identity verification link (visually hidden) */}
       <a rel='me' href='https://indieweb.social/@ryantoken'>
         <span style={visuallyHidden}>The Golden Hurricast on Mastodon</span>
@@ -201,13 +193,14 @@ export const query = graphql`
 
 export default HomeLayout
 
-export const Head = () => {
+export const Head = ({ location }) => {
   return (
     <>
       <Seo
         title={'The Golden Hurricast'}
         description={'The leading independent podcast and blog covering Golden Hurricane athletics at The University of Tulsa'}
         image={'/logo-white.jpg'}
+        pathname={location.pathname}
       />
       <meta charSet='utf-8' />
       <title>The Golden Hurricast</title> 

@@ -217,13 +217,14 @@ const MerchLayout = () => {
 
 export default MerchLayout
 
-export const Head = () => {
+export const Head = ({ location }) => {
 	return (
 		<>
 			<Seo
 				title={'Hurricast Merch'}
 				description={'Buy some Hurricast merchandise!'}
 				image={'/logo-white.jpg'}
+				pathname={location.pathname}
 			/>
 			<meta charSet='utf-8' />
 			<title>TGH | Merch</title>

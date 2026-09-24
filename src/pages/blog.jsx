@@ -31,7 +31,7 @@ const BlogLayout = ({data}) => {
           {edges.map(edge => {
             const { frontmatter } = edge.node
             return (
-              <div key={Math.random()} style={{display: 'flex', alignItems: 'center'}}>
+              <div key={frontmatter.path} style={{display: 'flex', alignItems: 'center'}}>
                 <Container className='blogedge'>
                     <Link
                       style={{
@@ -40,10 +40,7 @@ const BlogLayout = ({data}) => {
                       
                       to={`${frontmatter.path}`}
                     >
-                      <div
-                        key={frontmatter.path}
-                        className='floating_still_blog'
-                      >
+                      <div className='floating_still_blog'>
                         <p className='blog_title'>
                           {frontmatter.title}
                         </p>
@@ -87,13 +84,14 @@ export const query = graphql`
 
 export default BlogLayout
 
-export const Head = () => {
+export const Head = ({ location }) => {
   return (
     <>
       <Seo
         title={'The Golden Hurricast – Blog'}
         description={"Hurc's Corner. The Golden Hurriblog. Whatever you want to call it, we'll use this to dive deeper into stats, explore TU history, and more"}
         image={'/logo-white.jpg'}
+        pathname={location.pathname}
       />
       <meta charSet='utf-8' />
       <title>TGH | Blog</title>

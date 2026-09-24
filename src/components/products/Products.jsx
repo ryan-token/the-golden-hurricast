@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { graphql, useStaticQuery } from 'gatsby'
 import ProductCard from './ProductCard'
-import { calculateRemainingItems } from '../../api/merch-api'
+import { calculateRemainingItems } from '../../services/merch-api'
 
 const containerStyles = {
 	display: 'flex',
@@ -23,7 +23,6 @@ const Products = () => {
 				edges {
 					node {
 						id
-						active
 						currency
 						unit_amount
 						product {
@@ -43,36 +42,39 @@ const Products = () => {
 
 	useEffect(() => {
 		let mounted = true
-		calculateRemainingItems()
-		.then(items => {
-			if(mounted) {
+		calculateRemainingItems().then(items => {
+			if (mounted) {
 				setRemainingItems(items)
 			}
 		})
-		return () => mounted = false
+		return () => {
+			mounted = false
+		}
 	}, [])
 
-	// Group prices by product
-	const products = {}
-	const sortedProducts = prices.edges
-		.sort((a, b) => a.node.product.metadata.sort_number.localeCompare(b.node.product.metadata.sort_number))
-		.filter(item => item.node.product.active === true)
+	// Group each active product's prices together, ordered by the product's sort_number.
+	const products = useMemo(() => {
+		const productsById = new Map()
+		const activePrices = prices.edges
+			.map(({ node }) => node)
+			.filter(price => price.product.active)
+			.sort((a, b) => a.product.metadata.sort_number.localeCompare(b.product.metadata.sort_number))
 
-	for (const { node: price } of sortedProducts) {
-		const product = price.product
-
-		if (!products[product.id]) {
-			products[product.id] = product
-			products[product.id].prices = []
+		for (const price of activePrices) {
+			const { product } = price
+			if (!productsById.has(product.id)) {
+				productsById.set(product.id, { ...product, prices: [] })
+			}
+			productsById.get(product.id).prices.push(price)
 		}
-		products[product.id].prices.push(price)
-		products[product.id].remainingItems = remainingItems[product.id]
-	}
+
+		return [...productsById.values()]
+	}, [prices])
 
 	return (
 		<div style={containerStyles}>
-			{Object.keys(products).map(key => (
-				<ProductCard key={products[key].id} product={products[key]} remainingItems={products[key].remainingItems} />
+			{products.map(product => (
+				<ProductCard key={product.id} product={product} remainingItems={remainingItems[product.id]} />
 			))}
 		</div>
 	)

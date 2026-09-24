@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
 
+const MAX_QUANTITY = 10
+const LOW_STOCK_THRESHOLD = 5
+
 const cardStyles = {
 	display: 'flex',
 	flexDirection: 'column',
@@ -32,255 +35,124 @@ const buttonStyles = {
 }
 
 const buttonDisabledStyles = {
+	...buttonStyles,
 	opacity: '0.3',
 	cursor: 'not-allowed',
-	display: 'block',
-	fontSize: '13px',
-	textAlign: 'center',
-	color: 'white',
-	padding: '12px',
-	boxShadow: '2px 5px 10px rgba(0,0,0,.1)',
-	backgroundColor: '#0275d8',
 	border: '1px lightgrey solid',
-	borderRadius: '5px',
-	letterSpacing: '1.5px',
-	marginTop: '15px'
 }
 
-const formatPrice = (amount, currency) => {
-	let price = (amount / 100).toFixed(2)
-	let numberFormat = new Intl.NumberFormat(['en-US'], {
+const formatPrice = (amount, currency) =>
+	new Intl.NumberFormat('en-US', {
 		style: 'currency',
-		currency: currency,
+		currency,
 		currencyDisplay: 'symbol',
-	})
-	return numberFormat.format(price)
-}
+	}).format(amount / 100)
 
-const ProductCard = ({ product }) => {
+// `remainingItems` is undefined until the inventory request resolves.
+const ProductCard = ({ product, remainingItems }) => {
 	const [loading, setLoading] = useState(false)
-	const remainingItems = product.remainingItems
+
+	const soldOut = remainingItems <= 0
+	const lowStock = remainingItems > 0 && remainingItems <= LOW_STOCK_THRESHOLD
+	const quantityOptions = Array.from(
+		{ length: Math.max(0, Math.min(remainingItems ?? 0, MAX_QUANTITY)) },
+		(_, i) => i + 1
+	)
+	const buttonDisabled = soldOut || loading
 
 	const handleSubmit = async event => {
-	  event.preventDefault();
-	  setLoading(true);
-	
-	  try {
-		const productId = product.id;
-		const orderId = crypto.randomUUID();
-		const priceId = new FormData(event.target).get('priceSelect');
-		const quantity = new FormData(event.target).get('quantitySelect');
+		event.preventDefault()
+		setLoading(true)
 
-		const response = await fetch('/api/create-stripe-checkout-session', {
-		  method: 'POST',
-		  headers: {
-			'Content-Type': 'application/json'
-		  },
-		  body: JSON.stringify({
-			priceId,
-			quantity,
-			productId,
-			orderId,
-		  }),
-		});
+		try {
+			const formData = new FormData(event.target)
+			const response = await window.fetch('/api/create-stripe-checkout-session', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					priceId: formData.get('priceSelect'),
+					quantity: formData.get('quantitySelect'),
+					productId: product.id,
+					orderId: crypto.randomUUID(),
+				}),
+			})
 
-		const data = await response.json();
+			const data = await response.json()
 
-		if (!data.url) {
-		  throw new Error('No checkout URL received from server');
+			if (!data.url) {
+				throw new Error('No checkout URL received from server')
+			}
+
+			// Send the customer to Stripe's hosted Checkout page.
+			window.location.href = data.url
+		} catch (error) {
+			console.error('Error:', error)
+			setLoading(false)
 		}
+	}
 
-		// Send the customer to Stripe's hosted Checkout page.
-		window.location.href = data.url;
-	  } catch (error) {
-		console.error('Error:', error);
-		setLoading(false);
-	  }
-	};
+	return (
+		<div style={cardStyles}>
+			<form onSubmit={handleSubmit}>
+				<fieldset style={{ border: 'none' }}>
+					<legend style={{ marginBottom: '15px' }}>
+						<h4 style={{ marginBottom: '15px' }}>{product.name}</h4>
 
-	if (remainingItems <= 0) {
-		return (
-			<div style={cardStyles}>
-				<form onSubmit={handleSubmit}>
-					<fieldset style={{ border: 'none' }}>
-						<legend style={{ marginBottom: '15px' }}>
-							<h4 style={{marginBottom: '15px'}}>{product.name}</h4>
-							
-							<picture style={{padding: '10px', marginLeft: '25px'}}>
-								<source
-									type='image/webp'
-									srcSet={product.images[0]}
-									style={{ height: '200px', width: '200px', border: '0px' }}
-								/>
-								<img
-									src={product.images[0]}
-									alt={product.description}
-									style={{ height: '200px', width: '200px' }}
-									className='floating_merch_image'
-								/>
-							</picture>
-						</legend>
-						<label style={{ width: '100%' }}>
-							<b>Price</b>: {' '}
-							<select className='hidden-select' style={{ width: '75%' }} name='priceSelect'>
-								{product.prices.map(price => (
-									<option key={price.id} value={price.id}>
-										{formatPrice(price.unit_amount, price.currency)}
-									</option>
+						<img
+							src={product.images[0]}
+							alt={product.name}
+							width='200'
+							height='200'
+							loading='lazy'
+							style={{ marginLeft: '35px' }}
+							className='floating_merch_image'
+						/>
+					</legend>
+
+					<label style={{ width: '100%' }}>
+						<b>Price</b>: {' '}
+						<select className='hidden-select' style={{ width: '75%' }} name='priceSelect'>
+							{product.prices.map(price => (
+								<option key={price.id} value={price.id}>
+									{formatPrice(price.unit_amount, price.currency)}
+								</option>
+							))}
+						</select>
+					</label>
+
+					{!soldOut && (
+						<label style={{ width: '100%', marginTop: '10px' }}>
+							<b>Quantity</b>: {' '}
+							<select style={{ width: '50%', marginLeft: '5px' }} name='quantitySelect'>
+								{quantityOptions.map(quantity => (
+									<option key={quantity} value={quantity}>{quantity}</option>
 								))}
 							</select>
 						</label>
-						
-						<div style={{ width: '100%', paddingTop: '5px', marginBottom: '-15px' }}>
-							<p style={{ color: 'red', fontStyle: 'italic' }}>Sold out</p>
-						</div>
-						
+					)}
+
+					<div style={{ width: '100%', paddingTop: '5px', marginBottom: '-15px' }}>
+						{soldOut && <p style={{ color: 'red', fontStyle: 'italic' }}>Sold out</p>}
+						{lowStock && <p style={{ color: 'red', fontStyle: 'italic' }}>Only {remainingItems} left!</p>}
+						{/* Keeps cards the same height whether or not a stock message is shown. */}
+						{!soldOut && !lowStock && <p aria-hidden='true' style={{ visibility: 'hidden' }}>|</p>}
+					</div>
+
+					{soldOut && (
 						<div style={{ width: '100%', paddingTop: '5px' }}>
 							<p style={{ color: 'grey', fontStyle: 'italic' }}>Please <a href='mailto:thegoldenhurricast@gmail.com'>email us</a> if you're interested</p>
 						</div>
-						
-					</fieldset>
-					
-					<button
-						disabled
-						style={
-							buttonDisabledStyles
-						}
-					>
-						SEE DETAILS & CHECKOUT
-					</button>
-				</form>
-			</div>
-		)
-		
-	} else if (remainingItems <= 5 && remainingItems > 0) {
-		const quantityArray = Array.from({length: remainingItems}, (_, i) => i + 1)
-		return (
-			<div style={cardStyles}>
-				<form onSubmit={handleSubmit}>
-					<fieldset style={{ border: 'none' }}>
-						<legend style={{ marginBottom: '15px' }}>
-							<h4 style={{marginBottom: '15px'}}>{product.name}</h4>
-							
-							<picture style={{padding: '10px', marginLeft: '25px'}}>
-								<source
-									type='image/webp'
-									srcSet={product.images[0]}
-									style={{ height: '200px', width: '200px', border: '0px' }}
-								/>
-								<img
-									src={product.images[0]}
-									alt={product.description}
-									style={{ height: '200px', width: '200px' }}
-									className='floating_merch_image'
-								/>
-							</picture>
-						</legend>
-						<label style={{ width: '100%' }}>
-							<b>Price</b>: {' '}
-							<select className='hidden-select' style={{ width: '75%' }} name='priceSelect'>
-								{product.prices.map(price => (
-									<option key={price.id} value={price.id}>
-										{formatPrice(price.unit_amount, price.currency)}
-									</option>
-								))}
-							</select>
-						</label>
-						
-						<label style={{ width: '100%', marginTop: '10px' }}>
-							<b>Quantity</b>: {' '}
-							<select style={{ width: '50%', marginLeft: '5px' }} name='quantitySelect'>
-								{quantityArray.map(quantity => {
-									return <option value={quantity}>{quantity}</option>
-								})}
-							</select>
-						</label>
-						
-						<div style={{ width: '100%', paddingTop: '5px', marginBottom: '-15px' }}>
-							<p style={{ color: 'red', fontStyle: 'italic' }}>Only {remainingItems} left!</p>
-						</div>
-					</fieldset>
-					
-					<button
-						disabled={loading}
-						style={
-							loading
-								? { ...buttonStyles, ...buttonDisabledStyles }
-								: buttonStyles
-						}
-					>
-						SEE DETAILS & CHECKOUT
-					</button>
-				</form>
-			</div>
-		)
-		
-	} else {
-		const quantityArray = Array.from({length: remainingItems}, (_, i) => i + 1)
-		return (
-			<div style={cardStyles}>
-				<form onSubmit={handleSubmit}>
-					<fieldset style={{ border: 'none' }}>
-						<legend style={{ marginBottom: '15px' }}>
-							<h4 style={{marginBottom: '15px'}}>{product.name}</h4>
-							
-							<picture style={{padding: '10px', marginLeft: '25px'}}>
-								<source
-									type='image/webp'
-									srcSet={product.images[0]}
-									style={{ height: '200px', width: '200px', border: '0px' }}
-								/>
-								<img
-									src={product.images[0]}
-									alt={product.description}
-									style={{ height: '200px', width: '200px' }}
-									className='floating_merch_image'
-								/>
-							</picture>
-						</legend>
-						<label style={{ width: '100%' }}>
-							<b>Price</b>: {' '}
-							<select className='hidden-select' style={{ width: '75%' }} name='priceSelect'>
-								{product.prices.map(price => (
-									<option key={price.id} value={price.id}>
-										{formatPrice(price.unit_amount, price.currency)}
-									</option>
-								))}
-							</select>
-						</label>
-						
-						<label style={{ width: '100%', marginTop: '10px' }}>
-							<b>Quantity</b>: {' '}
-							<select style={{ width: '50%', marginLeft: '5px' }} name='quantitySelect'>
-								{quantityArray.map(quantity => {
-									if (quantity <= 10) {
-										return <option value={quantity}>{quantity}</option>	
-									} else {
-										return <div />
-									}
-								})}
-							</select>
-						</label>
-						
-						<div style={{ width: '100%', paddingTop: '5px', marginBottom: '-15px' }}>
-							<p style={{ color: 'white' }}> | </p>
-						</div>
-					</fieldset>
-					
-					<button
-						disabled={loading}
-						style={
-							loading
-								? { ...buttonStyles, ...buttonDisabledStyles }
-								: buttonStyles
-						}
-					>
-						SEE DETAILS & CHECKOUT
-					</button>
-				</form>
-			</div>
-		)	
-	}
+					)}
+				</fieldset>
+
+				<button disabled={buttonDisabled} style={buttonDisabled ? buttonDisabledStyles : buttonStyles}>
+					SEE DETAILS & CHECKOUT
+				</button>
+			</form>
+		</div>
+	)
 }
 
 export default ProductCard

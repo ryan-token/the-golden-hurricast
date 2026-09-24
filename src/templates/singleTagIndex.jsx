@@ -26,9 +26,9 @@ const SingleTagTemplate = ({ pageContext }) => {
         <hr />
 
         <ul>
-          {posts.map((post, index) => {
+          {posts.map(post => {
             return (
-              <li key={index}>
+              <li key={post.frontmatter.path}>
                 <Link style={{textDecoration: 'none'}} className='blog_title'
                   to={post.frontmatter.path}
                 >

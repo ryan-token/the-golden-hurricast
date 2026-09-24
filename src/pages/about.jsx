@@ -29,7 +29,8 @@ const AboutLayout = () => {
             The Golden Hurricast took up the mantle and officially debuted in
             August of 2018. <br /> <br /> Since then, we've been lucky enough to chat with several TU players, coaches, and administrators including:
               <ul style={{marginTop: '0.5rem'}}>
-                <li><b>Brad Carson</b> - Current President</li>
+                <li><b>Stacy Leeds</b> - Current President</li>
+                <li><b>Brad Carson</b> - Former President</li>
                 <li><b>Justin Moore</b> - Current Athletic Director</li>
                 <li><b>Rick Dickson</b> - Former Athletic Director</li>
                 <li><b>Tre Lamb</b> - Head Football Coach</li>
@@ -53,9 +54,8 @@ const AboutLayout = () => {
           <br />
 
           <p>
-              You can find our <a href='/podcast'>podcast</a> on <b>10 different platforms</b>, including
-              Apple Podcasts, Spotify, Google Podcasts, Stitcher, Overcast, Castro, Breaker,
-              PocketCasts, and more. Just search for 'The Golden Hurricast'.
+              You can find our <a href='/podcast'>podcast</a> on Apple Podcasts, Spotify, Overcast,
+              Pocket Casts, Castro, Goodpods, and more. Just search for 'The Golden Hurricast'.
           </p>
 
           <br />
@@ -127,13 +127,14 @@ const AboutLayout = () => {
 
 export default AboutLayout
 
-export const Head = () => {
+export const Head = ({ location }) => {
   return (
     <>
       <Seo
         title={'About The Golden Hurricast'}
         description={"We're an independent podcast and blog that covers all things Golden Hurricane athletics"}
         image={'/logo-white.jpg'}
+        pathname={location.pathname}
       />
       <meta charSet='utf-8' />
       <title>TGH | About Us</title>

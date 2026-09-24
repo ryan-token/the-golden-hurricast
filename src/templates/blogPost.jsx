@@ -58,7 +58,7 @@ const Template = ({data, pageContext}) => {
           {/*footer*/}
           <div>
             <Navbar fixed='bottom' expand='lg' bg='light' variant='light'>
-              <Nav className='mr-auto' style={{paddingLeft: '10px'}}>
+              <Nav className='me-auto' style={{paddingLeft: '10px'}}>
                 {prev && <Link to={prev.frontmatter.path}>Previous</Link>}
               </Nav>
               <Nav className='ms-auto' style={{paddingRight: '10px'}}>
@@ -87,18 +87,19 @@ export const query = graphql `
 
 export default Template
 
-export const Head = (props) => {
+export const Head = ({ data, location }) => {
+  const { title, excerpt } = data.markdownRemark.frontmatter
   return (
     <>
       <Seo
-          title={props.data.markdownRemark.frontmatter.title}
-          description={props.data.markdownRemark.frontmatter.excerpt || ''}
-          image={'/logo-white.jpg'}
-          pathname={props.location.pathname}
-          article
-        />
+        title={title}
+        description={excerpt}
+        image={'/logo-white.jpg'}
+        pathname={location.pathname}
+        article
+      />
       <meta charSet='utf-8' />
-      <title>{props.data.markdownRemark.frontmatter.title}</title>
+      <title>{title}</title>
     </>
   )
 }
