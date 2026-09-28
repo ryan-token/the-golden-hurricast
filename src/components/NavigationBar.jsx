@@ -5,7 +5,10 @@ import Nav from 'react-bootstrap/Nav'
 
 const NavigationBar = () => {
   return (
-    <div style={{ marginBottom: '75px' }}>
+    // Reserve space for the fixed navbar with height, not margin: an empty div's margin
+    // collapses up through #gatsby-focus-wrapper, pushing it 75px down the page. Chrome then
+    // scrolls it into view when Gatsby focuses it after client-side navigation.
+    <div style={{ height: '75px' }}>
       <Navbar fixed='top' collapseOnSelect expand='md' bg='dark' variant='dark' style={{ padding: '10px' }}>
         <Navbar.Brand as={Link} to='/'>
           <picture>

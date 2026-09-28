@@ -208,3 +208,10 @@ table {
   pointer-events: none;
   background: none;
 }
+
+/* Undo Bootstrap's smooth root scrolling. Gatsby resets scroll with window.scrollTo(0, 0)
+   on navigation, then focuses #gatsby-focus-wrapper; in Chromium that focus cuts the smooth
+   scroll off partway, leaving the new page scrolled down. */
+:root {
+  scroll-behavior: auto;
+}
