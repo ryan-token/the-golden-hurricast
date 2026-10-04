@@ -12,5 +12,3 @@ bun.lockb
 /src/content/
 /README.md
 /LICENSE
-/serverless/services/
-/serverless/shared/

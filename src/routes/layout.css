@@ -6,7 +6,8 @@
 	--font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
 	--color-ink: #212529;
-	--color-muted: #6c757d;
+	/* Darker than Bootstrap's #6c757d so it passes WCAG AA on the grey hero background. */
+	--color-muted: #5c636a;
 	--color-line: #dee2e6;
 	--color-surface: #e9ecef;
 	--color-navbar: #212529;
@@ -40,17 +41,18 @@
 		@apply leading-tight font-medium;
 	}
 
+	/* Like Bootstrap's responsive font sizes: large headings scale down on small screens. */
 	h1 {
-		@apply text-[2.5rem];
+		@apply text-[min(calc(1.375rem_+_1.5vw),2.5rem)];
 	}
 	h2 {
-		@apply text-[2rem];
+		@apply text-[min(calc(1.325rem_+_0.9vw),2rem)];
 	}
 	h3 {
-		@apply text-[1.75rem];
+		@apply text-[min(calc(1.3rem_+_0.6vw),1.75rem)];
 	}
 	h4 {
-		@apply text-2xl;
+		@apply text-[min(calc(1.275rem_+_0.3vw),1.5rem)];
 	}
 	h5 {
 		@apply text-xl;
@@ -61,6 +63,11 @@
 
 	a {
 		@apply text-primary hover:text-primary-hover;
+	}
+
+	/* Links inside running text are underlined, so they don't rely on color alone. */
+	:where(p) a {
+		@apply underline underline-offset-2;
 	}
 
 	hr {

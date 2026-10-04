@@ -18,7 +18,7 @@ This is not a game preview or a prediction post. For that, listen to our [OSU Pr
 
 <br />
 
-![Either way, it's been too long](https://media.giphy.com/media/NAm9sDr92fksw/giphy.gif)
+![Either way, it's been too long](/blog_images/mama-we-made-it/its-been-too-long.gif)
 
 <br />
 

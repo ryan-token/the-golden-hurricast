@@ -21,7 +21,7 @@
 <header
 	class={[
 		'relative mb-8 overflow-hidden bg-surface px-4 py-12 sm:px-8',
-		background && 'flex min-h-[63vh] items-start bg-ink text-white sm:max-h-[580px] sm:min-h-0'
+		background && 'flex min-h-[min(63vh,580px)] items-start bg-ink text-white'
 	]}
 >
 	{@render background?.()}

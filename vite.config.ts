@@ -16,12 +16,9 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter({ edge: false, split: false, publish: 'build' }),
-			paths: {
-				// The public origin. Used for prerendering (absolute URLs, canonical links) and CSRF checks.
-				origin: 'https://www.thegoldenhurricast.com'
-			},
 			csp: {
-				mode: 'auto',
+				// Hashes (not nonces) everywhere, so server-rendered pages can be cached by the CDN.
+				mode: 'hash',
 				directives: {
 					'default-src': ['self'],
 					'script-src': ['self'],
@@ -35,6 +32,8 @@ export default defineConfig({
 					// The merch checkout form posts to our own form action, which redirects to Stripe.
 					'form-action': ['self', 'https://checkout.stripe.com'],
 					'base-uri': ['self'],
+					// Only sent for server-rendered pages; `_headers` covers prerendered ones.
+					'frame-ancestors': ['none'],
 					'object-src': ['none'],
 					'upgrade-insecure-requests': true
 				}

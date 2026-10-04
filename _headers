@@ -1,0 +1,10 @@
+# Security headers for prerendered pages and static files (copied into the build by
+# @sveltejs/adapter-netlify). Server-rendered pages get the same headers from hooks.server.ts.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'

@@ -25,10 +25,10 @@
 	const isCurrent = (href: string) => page.url.pathname.startsWith(href);
 </script>
 
-<header class="sticky top-0 z-50 bg-navbar text-white">
+<header class="site-header sticky top-0 z-50 bg-navbar text-white">
 	<nav aria-label="Main" class="mx-auto flex items-center justify-between gap-4 p-2.5">
 		<a href="/" class="flex items-center gap-4 text-xl text-white no-underline hover:text-white">
-			<enhanced:img src={logo} alt="" class="h-12 w-[50px]" sizes="50px" />
+			<enhanced:img src={logo} alt="" class="size-12" sizes="48px" />
 			{SITE.name}
 		</a>
 
@@ -65,10 +65,14 @@
 </header>
 
 <style>
-	/* Mobile: a full-width dropdown under the bar. */
+	.site-header {
+		anchor-name: --site-header;
+	}
+
+	/* Mobile: a full-width dropdown anchored under the bar. */
 	.site-menu {
-		inset: auto 0 auto 0;
-		top: 4.25rem;
+		position-anchor: --site-header;
+		inset: anchor(bottom) 0 auto 0;
 		width: 100%;
 		margin: 0;
 		border: 0;

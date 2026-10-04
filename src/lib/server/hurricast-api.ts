@@ -5,7 +5,7 @@
  * Every response is validated, so a misbehaving API surfaces as a clear error here
  * rather than as a broken page.
  */
-import { HURRICAST_API_URL } from '$app/env/private';
+import { HURRICAST_API_KEY, HURRICAST_API_URL } from '$app/env/private';
 import * as v from 'valibot';
 
 const ProductSchema = v.object({
@@ -58,14 +58,24 @@ export class ApiError extends Error {
 	}
 }
 
+/**
+ * @param clientIp The visitor's IP, for the API's per-visitor rate limits. The API only
+ *   trusts it because the request is authenticated with the site key.
+ */
 async function request<T>(
 	path: string,
 	schema: v.GenericSchema<unknown, T>,
-	init?: RequestInit
+	{ clientIp, ...init }: RequestInit & { clientIp?: string } = {}
 ): Promise<T> {
 	const response = await fetch(`${HURRICAST_API_URL}${path}`, {
 		...init,
-		headers: { accept: 'application/json', ...init?.headers },
+		headers: {
+			accept: 'application/json',
+			// Always set at runtime (validated in src/env.ts); only optional while prerendering.
+			'x-api-key': HURRICAST_API_KEY ?? '',
+			...(clientIp && { 'x-client-ip': clientIp }),
+			...init.headers
+		},
 		signal: AbortSignal.timeout(10_000)
 	});
 	const body: unknown = await response.json().catch(() => undefined);
@@ -75,17 +85,23 @@ async function request<T>(
 		if (parsed.success) {
 			throw new ApiError(response.status, parsed.output.error.code, parsed.output.error.message);
 		}
-		throw new Error(`Hurricast API ${init?.method ?? 'GET'} ${path} failed: ${response.status}`);
+		throw new Error(`Hurricast API ${init.method ?? 'GET'} ${path} failed: ${response.status}`);
 	}
 
 	return v.parse(schema, body);
 }
 
-function post<T>(path: string, schema: v.GenericSchema<unknown, T>, body: unknown) {
+function post<T>(
+	path: string,
+	schema: v.GenericSchema<unknown, T>,
+	body: unknown,
+	clientIp: string
+) {
 	return request(path, schema, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify(body)
+		body: JSON.stringify(body),
+		clientIp
 	});
 }
 
@@ -98,15 +114,26 @@ export async function getCatalog(): Promise<Product[]> {
  * Reserves stock and creates a Stripe Checkout Session. `origin` must be one of the
  * API's allowed site origins; Stripe returns the customer there afterwards.
  */
-export function createCheckout(input: { productId: string; quantity: number; origin: string }) {
-	return post('/checkout', CheckoutSchema, input);
+export function createCheckout(
+	input: { productId: string; quantity: number; origin: string },
+	clientIp: string
+) {
+	return post('/checkout', CheckoutSchema, input, clientIp);
 }
 
 /** Looks up (and reconciles) the order behind a completed Checkout Session. */
-export function getOrderForCheckoutSession(sessionId: string): Promise<OrderSummary> {
-	return request(`/checkout/sessions/${encodeURIComponent(sessionId)}`, OrderSummarySchema);
+export function getOrderForCheckoutSession(
+	sessionId: string,
+	clientIp: string
+): Promise<OrderSummary> {
+	return request(`/checkout/sessions/${encodeURIComponent(sessionId)}`, OrderSummarySchema, {
+		clientIp
+	});
 }
 
-export async function submitQuestion(input: { question: string; name?: string }): Promise<void> {
-	await post('/questions', v.unknown(), input);
+export async function submitQuestion(
+	input: { question: string; name?: string },
+	clientIp: string
+): Promise<void> {
+	await post('/questions', v.unknown(), input, clientIp);
 }
