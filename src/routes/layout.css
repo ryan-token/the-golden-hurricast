@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/* Design tokens. Every colour, font and size used by the site comes from here. */
+@theme {
+	--font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+	--color-ink: #212529;
+	--color-muted: #6c757d;
+	--color-line: #dee2e6;
+	--color-surface: #e9ecef;
+	--color-navbar: #212529;
+	--color-primary: #0d6efd;
+	--color-primary-hover: #0b5ed7;
+	--color-danger: #dc3545;
+	--color-success: #198754;
+	--color-tu-blue: #002d72;
+	--color-x: #000000;
+	--color-bluesky: #0085ff;
+
+	--shadow-card: 0 5px 15px -7px rgb(0 0 0 / 0.6);
+	--shadow-photo: 0 2px 5px -2px rgb(0 0 0 / 0.6);
+}
+
+@layer base {
+	html {
+		color-scheme: light;
+	}
+
+	body {
+		@apply bg-white font-sans text-base leading-normal text-ink antialiased;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		@apply leading-tight font-medium;
+	}
+
+	h1 {
+		@apply text-[2.5rem];
+	}
+	h2 {
+		@apply text-[2rem];
+	}
+	h3 {
+		@apply text-[1.75rem];
+	}
+	h4 {
+		@apply text-2xl;
+	}
+	h5 {
+		@apply text-xl;
+	}
+	h6 {
+		@apply text-base;
+	}
+
+	a {
+		@apply text-primary hover:text-primary-hover;
+	}
+
+	hr {
+		@apply my-4 border-line;
+	}
+
+	:focus-visible {
+		@apply outline-2 outline-offset-2 outline-primary;
+	}
+}
