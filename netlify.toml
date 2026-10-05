@@ -4,7 +4,3 @@
   # so it overrides the old Gatsby `public` directory in Netlify's UI settings.
   publish = "build"
   environment = { NODE_VERSION = "24" }
-
-# Product photos are hosted by Stripe; let the Netlify Image CDN resize them (see src/lib/images.ts).
-[images]
-  remote_images = ["https://files\\.stripe\\.com/.*"]

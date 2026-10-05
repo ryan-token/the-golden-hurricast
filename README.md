@@ -48,12 +48,13 @@ The e2e suite never calls the real API, so any values work for the environment v
 | `src/routes/`                                             | Pages, with the same URLs (and trailing slashes) as the old Gatsby site. Blog posts live at the site root (`/a-spartan-recap/`).                                                            |
 | `src/content/posts/`                                      | Blog posts in Markdown, rendered at build time (`src/lib/server/markdown.ts`).                                                                                                             |
 | `src/lib/components/`                                     | Shared components. `ApplePodcastsEmbed` shows a lightweight stand-in and loads Apple's player once the page is idle; `AskQuestion` is a native `<dialog>` that works without JavaScript. |
+| `src/routes/merch/photos/` | Re-serves Stripe-hosted product photos from our domain with long cache headers, so the Netlify Image CDN can resize them once and cache the result (Stripe sends `no-store`). |
 | `src/lib/assets/`                                         | Images processed at build time by [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images) (AVIF/WebP, responsive sizes).                                                            |
 | `static/`                                                 | Files served as-is: blog images and videos, icons, share images.                                                                                                                         |
 | `src/routes/layout.css`                                   | Tailwind 4 theme: colours, heading sizes, content width, base styles.                                                                                                                      |
 | `vite.config.ts`                                          | SvelteKit config (Kit 3 has no `svelte.config.js`), including the hash-based Content Security Policy.                                                                                      |
 | `src/hooks.server.ts`                                     | Security headers for server-rendered pages, and redirects for old URLs and domain aliases.                                                                                                 |
-| `_headers`, `_redirects`, `netlify.toml`                  | Netlify: security headers for static files, domain-alias redirects for static files, build settings and the Image CDN allowlist (Stripe product photos).                                  |
+| `_headers`, `_redirects`, `netlify.toml`                  | Netlify: security headers for static files, domain-alias redirects for static files, build settings (including the publish directory).                                  |
 
 Redirects for old URLs live in `hooks.server.ts` rather than `_redirects`: Netlify sends any path without a static file to the SvelteKit function before it applies `_redirects`.
 

@@ -15,6 +15,9 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter({ edge: false, split: false, publish: 'build' }),
+			// Inline the site's stylesheet (~50 KB, 9 KB compressed) into each page, so the first
+			// paint doesn't wait on a separate render-blocking CSS request.
+			inlineStyleThreshold: 64 * 1024,
 			csp: {
 				// Hashes (not nonces) everywhere, so server-rendered pages can be cached by the CDN.
 				mode: 'hash',
@@ -22,7 +25,7 @@ export default defineConfig({
 					'default-src': ['self'],
 					'script-src': ['self'],
 					'style-src': ['self', 'unsafe-inline'],
-					// Product photos are served by Stripe.
+					// Product photos come from Stripe (via the Netlify Image CDN on Netlify).
 					'img-src': ['self', 'data:', 'https://files.stripe.com'],
 					'media-src': ['self'],
 					'font-src': ['self'],
