@@ -15,13 +15,28 @@ export const prerender = false;
 // An image, not a page: `/merch/photos/<token>`.
 export const trailingSlash = 'never';
 
+const TOKEN = /^[A-Za-z0-9_-]{1,256}$/;
+
+/** Photos of the products we sell, remembered briefly so stray requests don't each call the API. */
+let catalogPhotos: { urls: Set<string>; expires: number } | undefined;
+
+async function isCatalogPhoto(url: string): Promise<boolean> {
+	if (!catalogPhotos || catalogPhotos.expires < Date.now()) {
+		const products = await getCatalog();
+		catalogPhotos = {
+			urls: new Set(products.flatMap((product) => (product.image ? [product.image] : []))),
+			expires: Date.now() + 60_000
+		};
+	}
+	return catalogPhotos.urls.has(url);
+}
+
 export const GET: RequestHandler = async ({ params, fetch }) => {
 	const source = `${STRIPE_FILE_LINK}${params.token}`;
 
 	// Only photos of products we sell, so this can't be used to re-host anyone else's files.
 	// Runs once per photo: after that the CDN serves it.
-	const products = await getCatalog();
-	if (!products.some((product) => product.image === source)) error(404, 'Not found');
+	if (!TOKEN.test(params.token) || !(await isCatalogPhoto(source))) error(404, 'Not found');
 
 	const response = await fetch(source);
 	const type = response.headers.get('content-type') ?? '';

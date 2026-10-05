@@ -108,6 +108,7 @@ npm run inventory -- --stage prod track prod_123 "Name" 10   # sell a new Stripe
 npm run orders -- --stage prod                               # recent orders
 npm run orders -- --stage prod <orderId>                     # one order in full
 npm run orders -- --stage prod --due                         # orders the sweeper will re-check
+npm run questions -- --stage prod                            # recent listener questions
 ```
 
 A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata.
@@ -133,3 +134,13 @@ Secrets live in SSM Parameter Store (SecureString) and are read at runtime, neve
 The Stripe webhook endpoint for each stage points at `<api>/stripe/webhook`, uses API version `2026-09-30.endive` (matching `STRIPE_API_VERSION` in `src/merch/stripe.ts`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`.
 
 The table has deletion protection, point-in-time recovery and a `Retain` policy.
+
+## Going live (one time)
+
+In this order, so the site never points at an API that isn't ready:
+
+1. Create the prod secrets in SSM: `site-api-key` (32+ random characters) and `slack-webhook-url`. `stripe-secret-key` already exists.
+2. `npm run deploy:prod`, then register the live Stripe webhook endpoint (`<api>/stripe/webhook`, the four events above) and store its signing secret as `stripe-webhook-secret`.
+3. Seed inventory from the legacy merch backend: `npm run seed-inventory -- --stage prod` (a dry run that prints the plan), check it against a physical count, then add `--apply` (and `--set prod_…=N` for any corrections).
+4. In Netlify, set `HURRICAST_API_URL` (the prod API) and `HURRICAST_API_KEY` (the prod `site-api-key`) for the **Production** context, then merge to `main`.
+5. Make a live purchase and refund it. Then remove the old `merch-api` and `questions` stacks, the `GATSBY_*` Netlify variables and the `netlify-plugin-image-optim` plugin, and revoke the old Stripe secret key.

@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ setHeaders, platform }) => {
 
 const CheckoutForm = v.object({
 	productId: v.pipe(v.string(), v.regex(/^prod_[A-Za-z0-9]{1,64}$/)),
-	quantity: v.pipe(v.string(), v.toNumber(), v.integer(), v.minValue(1), v.maxValue(10))
+	quantity: v.pipe(v.string(), v.toNumber(), v.integer(), v.minValue(1))
 });
 
 export const actions: Actions = {

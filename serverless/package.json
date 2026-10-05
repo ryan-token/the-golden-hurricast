@@ -16,6 +16,7 @@
 		"deploy:prod": "npm run check && npm run lint && npm test && serverless package --stage prod --package .serverless-package/prod && node scripts/verify-bundle.ts .serverless-package/prod && serverless deploy --stage prod --package .serverless-package/prod",
 		"inventory": "node scripts/inventory.ts",
 		"orders": "node scripts/orders.ts",
+		"questions": "node scripts/questions.ts",
 		"seed-inventory": "node scripts/seed-inventory.ts",
 		"verify:bundle": "serverless package --stage dev --package .serverless-package/dev && node scripts/verify-bundle.ts .serverless-package/dev"
 	},

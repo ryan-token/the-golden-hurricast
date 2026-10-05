@@ -14,7 +14,7 @@ _Development by Ryan Token, blog and podcast contributions from Pat Fox, Matt Re
 ## 🚀 Stack
 
 - [SvelteKit 3](https://svelte.dev/docs/kit) and [Svelte 5](https://svelte.dev/docs/svelte), styled with [Tailwind CSS 4](https://tailwindcss.com/)
-- **Hosted on Netlify** with [`@sveltejs/adapter-netlify`](https://svelte.dev/docs/kit/adapter-netlify). Pages are prerendered to static HTML. The merch pages (`/merch/`, `/merch/success/`), the question endpoint (`/api/questions/`) and `/question-received/` are server-rendered by one Netlify Function.
+- **Hosted on Netlify** with [`@sveltejs/adapter-netlify`](https://svelte.dev/docs/kit/adapter-netlify). Pages are prerendered to static HTML. The merch pages (`/merch/`, `/merch/success/`, and product photos at `/merch/photos/…`), the question endpoint (`/api/questions/`) and `/question-received/` are server-rendered by one Netlify Function, which also receives any other URL without a static file (404s and old-URL redirects).
 - Merch, inventory, Stripe Checkout and listener questions are served by the AWS backend in [`serverless/`](serverless/README.md). The site calls it only from the server (`src/lib/server/hurricast-api.ts`), never from browsers.
 - **Commits to `main` trigger a production build on Netlify.** Other branches get deploy previews.
 - goldenhurricast.com redirects to thegoldenhurricast.com
@@ -27,7 +27,7 @@ Requires Node.js 24.
 
 ```sh
 npm install
-cp .env.example .env   # then set HURRICAST_API_URL (the dev API)
+cp .env.example .env   # then set HURRICAST_API_URL and HURRICAST_API_KEY for the dev API (SSM /hurricast/dev/site-api-key)
 npm run dev            # http://localhost:5173
 ```
 
