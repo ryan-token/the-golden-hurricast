@@ -135,12 +135,13 @@ The Stripe webhook endpoint (an "event destination" in the Dashboard) for each s
 
 The table has deletion protection, point-in-time recovery and a `Retain` policy.
 
-## Going live (one time)
+## Setting up a new stage
 
-In this order, so the site never points at an API that isn't ready:
+In this order, so the site never points at an API that isn't ready (`<stage>` is e.g. `prod`):
 
-1. Create the prod secrets in SSM: `site-api-key` (32+ random characters) and `slack-webhook-url`. `stripe-secret-key` already exists.
-2. `npm run deploy:prod`, then register the live Stripe webhook (`<api>/stripe/webhook`, the four events above) and store its signing secret as `stripe-webhook-secret`.
-3. Seed inventory from the legacy merch backend: `npm run seed-inventory -- --stage prod` (a dry run that prints the plan), check it against a physical count, then add `--apply` (and `--set prod_…=N` for any corrections).
-4. In Netlify, set `HURRICAST_API_URL` (the prod API) and `HURRICAST_API_KEY` (the prod `site-api-key`) for the **Production** context, then merge to `main`.
-5. Make a live purchase and refund it. Then remove the old `merch-api` and `questions` stacks, the `GATSBY_*` Netlify variables and the `netlify-plugin-image-optim` plugin, and revoke the old Stripe secret key.
+1. Create the stage's secrets in SSM (SecureString, under `/hurricast/<stage>/`): `stripe-secret-key`, `site-api-key` (32+ random characters) and `slack-webhook-url`.
+2. Deploy it (`npm run deploy:<stage>`, adding a script for a new stage), then add a Stripe event destination for `<api>/stripe/webhook` with the four events above, and store its signing secret as `stripe-webhook-secret`.
+3. Track each product's stock: `npm run inventory -- --stage <stage> track <productId> "<name>" <count>`.
+4. In Netlify, set `HURRICAST_API_URL` (the stage's API) and `HURRICAST_API_KEY` (its `site-api-key`) for the deploy context that should use it.
+
+The live site moved to this backend on 2026-10-05; the legacy `merch-api` and `questions` services were exported and removed.
