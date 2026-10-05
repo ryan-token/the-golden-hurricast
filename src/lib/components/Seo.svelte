@@ -38,13 +38,18 @@
 	const canonical = $derived(absoluteUrl(page.url.pathname));
 	const imageUrl = $derived(absoluteUrl(image));
 
-	// `<` is escaped so the JSON can never close the surrounding <script> element.
+	// One <script> per item: some JSON-LD readers expect an object with `@context`, not an
+	// array. `<` is escaped so the JSON can never close the surrounding <script> element.
 	// (The closing tag is split so it doesn't end this component's own <script> block.)
 	const jsonLdScript = $derived(
-		jsonLd
-			? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}<` +
+		[jsonLd ?? []]
+			.flat()
+			.map(
+				(item) =>
+					`<script type="application/ld+json">${JSON.stringify(item).replace(/</g, '\\u003c')}<` +
 					'/script>'
-			: ''
+			)
+			.join('')
 	);
 </script>
 

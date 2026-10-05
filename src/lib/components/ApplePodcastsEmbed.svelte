@@ -28,6 +28,7 @@
 				const id = requestIdleCallback(show, { timeout: 2000 });
 				cancel = () => cancelIdleCallback(id);
 			} else {
+				// Safari has no idle callbacks.
 				const id = setTimeout(show, 200);
 				cancel = () => clearTimeout(id);
 			}
@@ -44,8 +45,10 @@
 	});
 </script>
 
+<!-- One grid cell holds both the stand-in and the player, stacked. (An absolutely positioned
+     iframe here is never laid out by Safari 27: it stays 0×0.) -->
 <div
-	class="relative mx-auto aspect-video min-h-[175px] w-full max-w-[660px] overflow-hidden rounded-xl bg-surface"
+	class="mx-auto grid aspect-video min-h-[175px] w-full max-w-[660px] overflow-hidden rounded-xl bg-surface *:[grid-area:1/1]"
 >
 	<a
 		href={LINKS.applePodcasts}
@@ -86,7 +89,7 @@
 			allow="autoplay *; encrypted-media *; clipboard-write"
 			onload={() => (ready = true)}
 			class={[
-				'absolute inset-0 size-full border-0 bg-surface transition-opacity duration-300 motion-reduce:transition-none',
+				'size-full border-0 bg-surface transition-opacity duration-300 motion-reduce:transition-none',
 				!ready && 'pointer-events-none opacity-0'
 			]}
 		></iframe>
