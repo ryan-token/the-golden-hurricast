@@ -1,10 +1,11 @@
 /**
  * Starting a checkout, following Stripe's "managing limited inventory" pattern:
- * reserve stock first, then create a short-lived Checkout Session. If the customer doesn't
- * pay before it expires, the reservation is released (see reconcile.ts and sweep.ts).
+ * reserve stock first, then create a short-lived Checkout Session. If the customer backs out
+ * through Checkout's back link, the reservation is released at once (`cancelCheckout`);
+ * otherwise when the session expires (see reconcile.ts and sweep.ts).
  */
 import { ksuid } from '../lib/ksuid.ts';
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 import { getInventory } from '../data/inventory.ts';
 import {
 	attachCheckoutSession,
@@ -16,6 +17,7 @@ import {
 import { HttpError } from '../lib/errors.ts';
 import { log } from '../lib/log.ts';
 import { MAX_PER_ORDER, toStripeProduct } from './catalog.ts';
+import { reconcileCheckoutSession } from './reconcile.ts';
 import { SWEEP_GRACE_MS } from './schedule.ts';
 import { isMissing } from './stripe.ts';
 
@@ -100,7 +102,8 @@ export async function createCheckout(
 				payment_intent_data: { metadata: { orderId } },
 				expires_at: Math.floor(expiresAt.getTime() / 1000),
 				success_url: `${request.origin}/merch/success/?session_id={CHECKOUT_SESSION_ID}`,
-				cancel_url: `${request.origin}/merch/`
+				// Checkout's back link: releases the reservation, then returns to the merch page.
+				cancel_url: `${request.origin}/merch/cancel/?order=${orderId}`
 			},
 			// Retries of this request (by the SDK or by us) can never create a second session.
 			{ idempotencyKey: `checkout-session-${orderId}` }
@@ -120,6 +123,23 @@ export async function createCheckout(
 		quantity: request.quantity
 	});
 	return { orderId, url: session.url! };
+}
+
+/**
+ * The customer left Checkout through its back link: expire the session so it can't be paid,
+ * and release the reservation now instead of when the session would have expired. Safe to
+ * call any number of times; an order that has moved on (e.g. just paid) is left as it is.
+ * Returns the order, or `undefined` if there's no such order.
+ */
+export async function cancelCheckout(stripe: Stripe, orderId: string) {
+	const order = await getOrder(orderId);
+	if (order?.status !== 'RESERVED' || !order.checkoutSessionId) return order;
+
+	await stripe.checkout.sessions.expire(order.checkoutSessionId).catch((error: unknown) => {
+		// No longer open: it was just paid or has expired. Reconciling below handles either.
+		if (!(error instanceof Stripe.errors.StripeInvalidRequestError)) throw error;
+	});
+	return (await reconcileCheckoutSession(stripe, order.checkoutSessionId)) ?? order;
 }
 
 async function releaseAbandonedReservation(orderId: string) {

@@ -43,6 +43,16 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 	}
 });
 
+test("Checkout's back link always returns to the merch page, uncached", async ({ request }) => {
+	// A malformed id, then a well-formed one whose release fails (the API isn't reachable here).
+	for (const order of ['not-an-order', '3KGArskmb8VMn5UJADJjr80ZAvT']) {
+		const response = await request.get(`/merch/cancel/?order=${order}`, { maxRedirects: 0 });
+		expect(response.status(), order).toBe(303);
+		expect(response.headers().location).toBe('/merch/');
+		expect(response.headers()['cache-control']).toBe('no-store');
+	}
+});
+
 test('unknown URLs are a 404', async ({ page }) => {
 	const response = await page.goto('/this-page-does-not-exist/');
 

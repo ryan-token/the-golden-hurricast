@@ -127,6 +127,11 @@ export function createCheckout(
 	return post('/checkout', CheckoutSchema, input, clientIp);
 }
 
+/** Releases the stock held for a checkout the customer backed out of. Safe to repeat. */
+export async function cancelCheckout(orderId: string, clientIp: string): Promise<void> {
+	await post(`/checkout/${encodeURIComponent(orderId)}/cancel`, v.unknown(), {}, clientIp);
+}
+
 /** Looks up (and reconciles) the order behind a completed Checkout Session. */
 export function getOrderForCheckoutSession(
 	sessionId: string,

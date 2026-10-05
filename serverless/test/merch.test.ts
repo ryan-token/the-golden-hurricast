@@ -6,7 +6,7 @@ import { getOrder, listOrders } from '../src/data/orders.ts';
 import { ddb } from '../src/data/table.ts';
 import { HttpError } from '../src/lib/errors.ts';
 import { clearCatalogCache, getCatalog, MAX_PER_ORDER } from '../src/merch/catalog.ts';
-import { createCheckout } from '../src/merch/checkout.ts';
+import { cancelCheckout, createCheckout } from '../src/merch/checkout.ts';
 import { reconcileCheckoutSession } from '../src/merch/reconcile.ts';
 import { sweepReservations } from '../src/merch/sweep.ts';
 import { FakeStripe } from './fake-stripe.ts';
@@ -115,7 +115,7 @@ describe('createCheckout', () => {
 			client_reference_id: result.orderId,
 			metadata: { orderId: result.orderId },
 			success_url: `${ORIGIN}/merch/success/?session_id={CHECKOUT_SESSION_ID}`,
-			cancel_url: `${ORIGIN}/merch/`
+			cancel_url: `${ORIGIN}/merch/cancel/?order=${result.orderId}`
 		});
 		// Stripe requires at least 30 minutes.
 		expect(session.expires_at - now.getTime() / 1000).toBeGreaterThanOrEqual(30 * 60);
@@ -161,6 +161,29 @@ describe('createCheckout', () => {
 		expect(await stock(SHIRT.id)).toEqual({ available: 3, reserved: 0, sold: 0 });
 		const [order] = await listOrders();
 		expect(order?.status).toBe('CANCELED');
+	});
+});
+
+describe('cancelCheckout', () => {
+	it('releases the reservation at once when the customer backs out, however often it runs', async () => {
+		const { orderId } = await checkout(2);
+
+		await cancelCheckout(stripe.client, orderId);
+		await cancelCheckout(stripe.client, orderId);
+
+		expect(stripe.onlySession.status).toBe('expired');
+		expect((await getOrder(orderId))?.status).toBe('EXPIRED');
+		expect(await stock(SHIRT.id)).toEqual({ available: 3, reserved: 0, sold: 0 });
+	});
+
+	it('never cancels a checkout that was just paid', async () => {
+		const { orderId } = await checkout(1);
+		stripe.pay(stripe.onlySession.id);
+
+		await cancelCheckout(stripe.client, orderId);
+
+		expect((await getOrder(orderId))?.status).toBe('PAID');
+		expect(await stock(SHIRT.id)).toEqual({ available: 2, reserved: 0, sold: 1 });
 	});
 });
 

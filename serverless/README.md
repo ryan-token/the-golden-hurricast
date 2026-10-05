@@ -39,7 +39,7 @@ POST ?/checkout ──────────────────▶ POST /
 This follows Stripe's [fulfillment](https://docs.stripe.com/checkout/fulfillment) and [limited inventory](https://docs.stripe.com/payments/checkout/managing-limited-inventory) guides:
 
 - **Prices are resolved on the server.** The site sends only a product id and quantity; the charge is the product's Stripe `default_price`.
-- **Stock is reserved before checkout**, so two customers can't buy the last item, and released when a checkout expires.
+- **Stock is reserved before checkout**, so two customers can't buy the last item. It's released at once if the customer backs out through Checkout's back link (`POST /checkout/{orderId}/cancel`, called by the site's `/merch/cancel/` route, expires the session), and otherwise when the checkout expires.
 - **Fulfillment is idempotent.** The webhook, the success page and the sweeper all call the same `reconcileCheckoutSession()`, which always re-reads the session from Stripe. Every order change is a DynamoDB transaction conditioned on the order's current status, so retries and concurrent calls can't double-count.
 - **The sweeper is the safety net**: it expires checkouts Stripe left open, catches missed webhooks, and releases reservations whose checkout was never created.
 - **A payment that lands after its reservation was released** is still honored and flagged `oversold` (the Slack message says so).

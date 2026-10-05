@@ -125,6 +125,17 @@ functions:
           - ${self:custom.iam.stripeKey}
           - ${self:custom.iam.orderReadWrite}
 
+  cancelCheckout:
+    handler: src/handlers/cancel-checkout.handler
+    events:
+      - httpApi: POST /checkout/{orderId}/cancel
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+          - ${self:custom.iam.stripeKey}
+          - ${self:custom.iam.orderReadWrite}
+
   stripeWebhook:
     handler: src/handlers/stripe-webhook.handler
     events:
