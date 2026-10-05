@@ -4,7 +4,7 @@ export const SITE = {
 	shortName: 'TGH',
 	url: 'https://www.thegoldenhurricast.com',
 	description:
-		'The leading independent podcast and blog covering Golden Hurricane athletics at The University of Tulsa',
+		'The leading independent podcast covering Golden Hurricane athletics at The University of Tulsa',
 	email: 'thegoldenhurricast@gmail.com',
 	xHandle: '@GoldenHurricast',
 	blueskyHandle: '@thegoldenhurricast.com',
@@ -15,8 +15,6 @@ export const SITE = {
 export const LINKS = {
 	applePodcasts:
 		'https://podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?itscg=30200&itsct=podcast_box&ls=1&mttnsubad=1435008302',
-	applePodcastsEmbed:
-		'https://embed.podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?itscg=30200&itsct=podcast_box_player&ls=1&mttnsubad=1435008302&theme=light&size=large',
 	spotify: 'https://open.spotify.com/show/16ik0AuBrpVBfWn73jlJio',
 	spotifyCreators: 'https://creators.spotify.com/pod/show/thegoldenhurricast',
 	spotifySupport: 'https://creators.spotify.com/pod/show/thegoldenhurricast/support',
@@ -31,10 +29,46 @@ export const LINKS = {
 	paypal: 'https://paypal.me/thegoldenhurricast',
 	mastodon: 'https://indieweb.social/@ryantoken',
 	mythic: 'https://www.mythic.press/',
+	rss: 'https://anchor.fm/s/532d7b4/podcast/rss',
 	email: `mailto:${SITE.email}`
 } as const;
+
+/** Where to listen, in the order we list them. */
+export const LISTEN_ON = [
+	{ name: 'Apple Podcasts', href: LINKS.applePodcasts },
+	{ name: 'Spotify', href: LINKS.spotify },
+	{ name: 'Overcast', href: LINKS.overcast },
+	{ name: 'Pocket Casts', href: LINKS.pocketCasts },
+	{ name: 'Castro', href: LINKS.castro },
+	{ name: 'Goodpods', href: LINKS.goodpods }
+] as const;
 
 /** Absolute URL for a site-relative path, e.g. `absoluteUrl('/podcast/')`. */
 export function absoluteUrl(path: string): string {
 	return new URL(path, SITE.url).href;
 }
+
+export const PATREON_TIERS = [
+	{
+		name: 'Carrot Cane',
+		price: 5,
+		perks: [
+			'Keeps the show ad-free and independent',
+			'10% goes to the Hurricane Impact NIL collective',
+			'Bonus content, like the occasional blog post',
+			'Private Discord with us',
+			'20% off all merch'
+		]
+	},
+	{
+		name: 'Gus T. Hurricane',
+		price: 10,
+		featured: true,
+		perks: ['Everything in Carrot Cane', 'Video versions of the podcast', 'TGH sticker']
+	},
+	{
+		name: 'Hurc the Hurricane',
+		price: 25,
+		perks: ['Everything in Gus T. Hurricane', 'Input on topics for upcoming shows']
+	}
+] as const;

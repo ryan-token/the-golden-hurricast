@@ -16,15 +16,14 @@
 </script>
 
 <article
-	class="relative rounded-[5px] border border-line bg-white p-2.5 shadow-card transition-shadow hover:shadow-lg has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-primary"
+	class="relative h-full rounded-lg border border-line bg-surface p-5 transition-[border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-lift has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-accent"
 >
-	<svelte:element this={`h${headingLevel}`} class="text-lg leading-snug font-bold">
-		<a href={post.path} class="after:absolute after:inset-0 focus-visible:outline-none">
-			{post.title}
-		</a>
+	<p class="text-sm text-muted"><time datetime={post.published}>{post.displayDate}</time></p>
+	<svelte:element
+		this={`h${headingLevel}`}
+		class="mt-1 text-lg leading-snug font-bold text-heading"
+	>
+		<a href={post.path} class="stretched-link focus-ring-none">{post.title}</a>
 	</svelte:element>
-	<p class="mt-2.5 text-[15px] text-muted">
-		<time datetime={post.published}>{post.displayDate}</time>
-	</p>
-	<p class="mt-2.5 text-[15px] text-muted">{post.excerpt}</p>
+	<p class="mt-2 text-[0.9375rem] text-muted">{post.excerpt}</p>
 </article>

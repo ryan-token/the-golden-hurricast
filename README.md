@@ -14,7 +14,7 @@ _Development by Ryan Token, blog and podcast contributions from Pat Fox, Matt Re
 ## 🚀 Stack
 
 - [SvelteKit 3](https://svelte.dev/docs/kit) and [Svelte 5](https://svelte.dev/docs/svelte), styled with [Tailwind CSS 4](https://tailwindcss.com/)
-- **Hosted on Netlify** with [`@sveltejs/adapter-netlify`](https://svelte.dev/docs/kit/adapter-netlify). Pages are prerendered to static HTML. The merch pages (`/merch/`, `/merch/success/`, `/merch/cancel/` for Stripe Checkout's back link, and product photos at `/merch/photos/…`), the question endpoint (`/api/questions/`) and `/question-received/` are server-rendered by one Netlify Function, which also receives any other URL without a static file (404s and old-URL redirects).
+- **Hosted on Netlify** with [`@sveltejs/adapter-netlify`](https://svelte.dev/docs/kit/adapter-netlify). Most pages are prerendered to static HTML. Pages built from the podcast's RSS feed (`/`, `/podcast/` and everything under it, and `/sitemap.xml`) are server-rendered and cached by Netlify's CDN for ten minutes, so new episodes appear without a rebuild. The merch pages (`/merch/`, `/merch/success/`, `/merch/cancel/` for Stripe Checkout's back link, and product photos at `/merch/photos/…`), the question endpoint (`/api/questions/`) and `/question-received/` are server-rendered by one Netlify Function, which also receives any other URL without a static file (404s and old-URL redirects).
 - Merch, inventory, Stripe Checkout and listener questions are served by the AWS backend in [`serverless/`](serverless/README.md). The site calls it only from the server (`src/lib/server/hurricast-api.ts`), never from browsers.
 - **Commits to `main` trigger a production build on Netlify.** Other branches get deploy previews.
 - goldenhurricast.com redirects to thegoldenhurricast.com
@@ -39,7 +39,7 @@ npm run test:e2e   # Playwright in Chromium, Firefox and WebKit (Safari), agains
 npm run build && npm run preview
 ```
 
-The e2e suite never calls the real API, so any values work for the environment variables there (the key must still be at least 32 characters).
+The e2e suite never calls the real API, so any values work for the environment variables there (the key must still be at least 32 characters). It does read the public podcast feed, as the site does.
 
 ### How it fits together
 
@@ -47,11 +47,13 @@ The e2e suite never calls the real API, so any values work for the environment v
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `src/routes/`                                             | Pages, with the same URLs (and trailing slashes) as the old Gatsby site. Blog posts live at the site root (`/a-spartan-recap/`).                                                            |
 | `src/content/posts/`                                      | Blog posts in Markdown, rendered at build time (`src/lib/server/markdown.ts`).                                                                                                             |
-| `src/lib/components/`                                     | Shared components. `ApplePodcastsEmbed` shows a lightweight stand-in and loads Apple's player once the page is idle; `AskQuestion` is a native `<dialog>` that works without JavaScript. |
+| `src/lib/components/`                                     | Shared components. `MiniPlayer` holds the site's one `<audio>` element in the root layout, so playback carries on between pages; `AskQuestion` and `Sheet` are native `<dialog>`s that work without JavaScript. |
+| `src/lib/server/episodes.ts`                              | Reads the show's RSS feed on Spotify for Creators into episodes (numbering parsed from titles, sanitized show notes).                                                                       |
+| `src/lib/guests.ts`                                       | Everyone who's been on the show, and the episodes they were on. Featured guests' official headshots are in `src/lib/assets/guests/`.                                                       |
 | `src/routes/merch/photos/` | Re-serves Stripe-hosted product photos from our domain with long cache headers, so the Netlify Image CDN can resize them once and cache the result (Stripe sends `no-store`). |
 | `src/lib/assets/`                                         | Images processed at build time by [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images) (AVIF/WebP, responsive sizes).                                                            |
 | `static/`                                                 | Files served as-is: blog images and videos, icons, share images.                                                                                                                         |
-| `src/routes/layout.css`                                   | Tailwind 4 theme: colours, heading sizes, content width, base styles.                                                                                                                      |
+| `src/routes/layout.css`                                   | Tailwind 4 theme: TU brand colours as light/dark pairs, type scale, radii, page transitions, base styles.                                                                                   |
 | `vite.config.ts`                                          | SvelteKit config (Kit 3 has no `svelte.config.js`), including the hash-based Content Security Policy.                                                                                      |
 | `src/hooks.server.ts`                                     | Security headers for server-rendered pages, and redirects for old URLs and domain aliases.                                                                                                 |
 | `_headers`, `_redirects`, `netlify.toml`                  | Netlify: security headers for static files, domain-alias redirects for static files, build settings (including the publish directory).                                  |

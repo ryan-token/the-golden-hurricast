@@ -1,0 +1,115 @@
+<script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
+	import Seo from '#lib/components/Seo.svelte';
+	import { episodeLabel, episodePath } from '#lib/episodes.js';
+	import { GUEST_PHOTOS } from '#lib/guest-photos.js';
+	import { FEATURED_GUESTS } from '#lib/guests.js';
+	import { breadcrumbs } from '#lib/structured-data.js';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	type Appearance = (typeof data.featured)[string][number];
+</script>
+
+<Seo
+	title="Guests"
+	description="Everyone who has been on The Golden Hurricast: TU's president, athletic directors and head coaches, former players, Tulsa media, and our friends around the American and beyond."
+	jsonLd={breadcrumbs([
+		{ name: 'Home', path: '/' },
+		{ name: 'Podcast', path: '/podcast/' },
+		{ name: 'Guests', path: '/podcast/guests/' }
+	])}
+/>
+
+{#snippet episodeLinks(appearances: Appearance[], className?: string)}
+	<ul class={['flex flex-wrap gap-1.5', className]}>
+		{#each appearances as appearance (appearance.slug)}
+			<li>
+				<a
+					href={episodePath(appearance.slug)}
+					title={appearance.title}
+					class="inline-flex h-7 items-center rounded-full bg-tile px-2.5 text-xs font-semibold whitespace-nowrap text-on-tile transition-colors hover:bg-accent hover:text-on-accent"
+				>
+					{episodeLabel(appearance)}<span class="sr-only">: {appearance.title}</span>
+				</a>
+			</li>
+		{/each}
+	</ul>
+{/snippet}
+
+<PageHeader title="Everyone who’s pulled up a chair" back={{ href: '/podcast/', label: 'Podcast' }}>
+	{#snippet lead()}
+		University leadership, coaches, former players, the people who cover Tulsa for a living and our
+		counterparts around the American and beyond. Each one links to the episodes they were on.
+	{/snippet}
+</PageHeader>
+
+<section aria-labelledby="featured" class="page">
+	<h2 id="featured" class="sr-only">Featured guests</h2>
+	<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+		{#each FEATURED_GUESTS as guest (guest.slug)}
+			<li class="flex gap-4 rounded-lg border border-line bg-surface p-3 lg:flex-col">
+				<enhanced:img
+					src={GUEST_PHOTOS[guest.slug]}
+					alt=""
+					sizes="(min-width: 64rem) 12rem, 5rem"
+					loading="lazy"
+					class="aspect-4/5 w-20 shrink-0 rounded-md object-cover lg:w-full"
+				/>
+				<div class="grid content-start gap-2">
+					<div>
+						<p class="font-display text-2xl leading-none font-extrabold text-heading">
+							{guest.name}
+						</p>
+						<p class="mt-1 text-sm text-muted">{guest.role}</p>
+					</div>
+					{@render episodeLinks(data.featured[guest.slug])}
+				</div>
+			</li>
+		{/each}
+	</ul>
+</section>
+
+<div class="page grid gap-12 py-14 sm:py-16 lg:grid-cols-2 lg:gap-x-16">
+	{#each data.groups as group (group.name)}
+		{@const id = group.name.toLowerCase().replaceAll(' ', '-')}
+		<section aria-labelledby={id}>
+			<h2 {id} class="mb-4 display text-d3">{group.name}</h2>
+			{#each group.sections as section (section.name)}
+				{#if section.name}
+					<h3 class="mt-6 mb-2 text-sm font-semibold text-muted first-of-type:mt-0">
+						{section.name}
+					</h3>
+				{/if}
+				<ul class="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+					{#each section.guests as guest (guest.name)}
+						<li
+							class="grid gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+						>
+							<div>
+								{#if guest.url}
+									<a
+										href={guest.url}
+										target="_blank"
+										rel="noopener"
+										class="inline-flex items-center gap-1 font-semibold text-heading hover:underline"
+									>
+										{guest.name}
+										<Icon name="external" class="size-3.5 text-muted" />
+										<span class="sr-only">(opens in a new tab)</span>
+									</a>
+								{:else}
+									<p class="font-semibold text-heading">{guest.name}</p>
+								{/if}
+								{#if guest.role}<p class="text-sm text-muted">{guest.role}</p>{/if}
+							</div>
+							{@render episodeLinks(guest.appearances, 'sm:max-w-64 sm:justify-end')}
+						</li>
+					{/each}
+				</ul>
+			{/each}
+		</section>
+	{/each}
+</div>

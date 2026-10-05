@@ -114,3 +114,31 @@ export function product(item: {
 		}
 	};
 }
+
+export function podcastEpisode(episode: {
+	title: string;
+	description: string;
+	path: string;
+	published: string;
+	/** In seconds. */
+	duration: number;
+	audio: string;
+	season?: number;
+	number?: number;
+}): JsonLd {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'PodcastEpisode',
+		name: episode.title,
+		description: episode.description,
+		url: absoluteUrl(episode.path),
+		datePublished: episode.published,
+		timeRequired: `PT${Math.round(episode.duration / 60)}M`,
+		...(episode.number !== undefined && { episodeNumber: episode.number }),
+		...(episode.season !== undefined && {
+			partOfSeason: { '@type': 'PodcastSeason', seasonNumber: episode.season }
+		}),
+		associatedMedia: { '@type': 'MediaObject', contentUrl: episode.audio },
+		partOfSeries: { '@type': 'PodcastSeries', name: SITE.name, url: absoluteUrl('/podcast/') }
+	};
+}

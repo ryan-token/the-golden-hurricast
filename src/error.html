@@ -5,15 +5,24 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>%sveltekit.status% | The Golden Hurricast</title>
 		<style>
+			:root {
+				color-scheme: light dark;
+			}
 			body {
-				font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-				color: #212529;
+				font-family:
+					system-ui,
+					-apple-system,
+					'Segoe UI',
+					Roboto,
+					sans-serif;
+				color: light-dark(#0d1b3e, #edf0f7);
+				background: light-dark(#fbf8f2, #08132e);
 				max-width: 40rem;
 				margin: 4rem auto;
 				padding: 0 1rem;
 			}
 			a {
-				color: #0d6efd;
+				color: light-dark(#003595, #e2cd9f);
 			}
 		</style>
 	</head>

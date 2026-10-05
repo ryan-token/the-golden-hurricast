@@ -1,17 +1,31 @@
+import { episodePath } from '#lib/episodes.js';
+import { cacheEpisodePage, getEpisodes } from '#lib/server/episodes.js';
 import { getPostSummaries, getTags } from '#lib/server/posts.js';
 import { absoluteUrl } from '#lib/site.js';
 import type { RequestHandler } from './$types';
 
-export const prerender = true;
+// Rendered on request (and cached by the CDN) so it lists new episodes.
+export const prerender = false;
 
 /** Indexable pages that aren't blog posts or tag pages. */
-const PAGES = ['/', '/podcast/', '/blog/', '/about/', '/support/', '/merch/', '/tags/'];
+const PAGES = [
+	'/',
+	'/podcast/',
+	'/podcast/episodes/',
+	'/podcast/guests/',
+	'/blog/',
+	'/about/',
+	'/merch/',
+	'/tags/'
+];
 
-export const GET: RequestHandler = async () => {
-	const [posts, tags] = await Promise.all([getPostSummaries(), getTags()]);
+export const GET: RequestHandler = async ({ setHeaders }) => {
+	const [posts, tags, episodes] = await Promise.all([getPostSummaries(), getTags(), getEpisodes()]);
+	cacheEpisodePage(setHeaders);
 
 	const entries: { path: string; lastmod?: string }[] = [
 		...PAGES.map((path) => ({ path })),
+		...episodes.map(({ slug, published }) => ({ path: episodePath(slug), lastmod: published })),
 		...[...tags.keys()].map((tag) => ({ path: `/tags/${encodeURIComponent(tag)}/` })),
 		...posts.map(({ path, published }) => ({ path, lastmod: published }))
 	];

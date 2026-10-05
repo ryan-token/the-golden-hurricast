@@ -2,12 +2,15 @@ import { expect, test } from '@playwright/test';
 
 const ORIGIN = 'https://www.thegoldenhurricast.com';
 
+// Pages built from the podcast feed need it to be reachable, as they do in production.
 const PAGES = [
-	{ path: '/', h1: 'The Golden Hurricast' },
-	{ path: '/podcast/', h1: 'The Golden Hurricast' },
-	{ path: '/blog/', h1: 'Our Blog' },
-	{ path: '/about/', h1: 'About Us' },
-	{ path: '/support/', h1: 'Support Us' },
+	{ path: '/', h1: 'Golden Hurricane talk, every week since 2018.' },
+	{ path: '/podcast/', h1: 'The podcast' },
+	{ path: '/podcast/episodes/', h1: 'Every episode' },
+	{ path: '/podcast/episodes/1-1-stay-golden/', h1: 'Stay Golden' },
+	{ path: '/podcast/guests/', h1: 'Everyone who’s pulled up a chair' },
+	{ path: '/blog/', h1: 'Hurc’s Corner' },
+	{ path: '/about/', h1: 'Two alums who never stopped going to games.' },
 	{ path: '/tags/', h1: 'Tags' },
 	{ path: '/tags/football/', h1: 'Posts about football' },
 	{ path: '/tags/golden%20hurristats/', h1: 'Posts about golden hurristats' },
@@ -33,6 +36,7 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 	for (const [path, location] of [
 		['/merch-success', '/merch/'],
 		['/merch-success/', '/merch/'],
+		['/support/', '/about/#support'],
 		['/patreon.png', '/blog_images/patreon/patreon-tiers.png'],
 		['/apple-touch-icon.webp', '/apple-touch-icon.png'],
 		['/icons/icon-192x192.png?v=25536b73763a79fd4857f010bced2939', '/apple-touch-icon.png']
@@ -41,6 +45,28 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 		expect(response.status(), path).toBe(301);
 		expect(response.headers().location, path).toBe(location);
 	}
+});
+
+test('searching the episode archive filters as you type and keeps the URL in step', async ({
+	page
+}) => {
+	await page.goto('/podcast/episodes/');
+	const search = page.getByRole('searchbox', { name: 'Search episodes' });
+
+	await search.pressSequentially('stay golden');
+	await expect(search).toHaveValue('stay golden');
+	await expect(page).toHaveURL('/podcast/episodes/?q=stay%20golden');
+	await expect(page.getByRole('main').getByRole('article')).toHaveCount(1);
+
+	// The filtered URL works on its own, without JavaScript's help.
+	await page.reload();
+	await expect(page.getByRole('main').getByRole('article')).toHaveCount(1);
+});
+
+test('an episode whose title changed redirects to its current page', async ({ request }) => {
+	const response = await request.get('/podcast/episodes/1-1-an-old-title/', { maxRedirects: 0 });
+	expect(response.status()).toBe(301);
+	expect(response.headers().location).toBe('/podcast/episodes/1-1-stay-golden/');
 });
 
 test("Checkout's back link always returns to the merch page, uncached", async ({ request }) => {
@@ -72,16 +98,19 @@ test('the blog lists every post and links to tags', async ({ page }) => {
 	await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(2);
 });
 
-test('the sitemap lists canonical pages, tags and posts', async ({ request }) => {
+test('the sitemap lists canonical pages, episodes, tags and posts', async ({ request }) => {
 	const response = await request.get('/sitemap.xml');
 	const body = await response.text();
 
 	expect(response.status()).toBe(200);
 	expect(body).toContain(`<loc>${ORIGIN}/podcast/</loc>`);
+	expect(body).toContain(
+		`<loc>${ORIGIN}/podcast/episodes/1-1-stay-golden/</loc><lastmod>2018-08-29</lastmod>`
+	);
 	expect(body).toContain(`<loc>${ORIGIN}/tags/golden%20hurristats/</loc>`);
 	expect(body).toContain(`<loc>${ORIGIN}/a-spartan-recap/</loc><lastmod>2019-09-13</lastmod>`);
 	expect(body).not.toContain('question-received');
-	expect(body.match(/<url>/g)).toHaveLength(42);
+	expect(body).not.toContain('/support/');
 });
 
 test.describe('at phone width', () => {
@@ -104,7 +133,17 @@ test.describe('at phone width', () => {
 	});
 
 	test('pages do not scroll sideways', async ({ page }) => {
-		for (const path of ['/', '/podcast/', '/blog/', '/about/', '/support/', '/tags/']) {
+		for (const path of [
+			'/',
+			'/podcast/',
+			'/podcast/episodes/',
+			'/podcast/episodes/9-1-punching-above-our-weight/',
+			'/podcast/guests/',
+			'/merch/',
+			'/blog/',
+			'/about/',
+			'/tags/'
+		]) {
 			await page.goto(path);
 			const overflow = await page.evaluate(
 				() => document.documentElement.scrollWidth - document.documentElement.clientWidth

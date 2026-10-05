@@ -10,6 +10,8 @@ export interface FakeProduct {
 	name: string;
 	active?: boolean;
 	sortNumber?: number;
+	/** Other product metadata, e.g. `group` and `size`. */
+	metadata?: Record<string, string>;
 	price?: { id: string; unitAmount: number; active?: boolean };
 }
 
@@ -187,7 +189,10 @@ function toStripeProduct(product: FakeProduct): Stripe.Product {
 		name: product.name,
 		active: product.active ?? true,
 		images: [`https://files.stripe.com/links/${product.id}`],
-		metadata: product.sortNumber === undefined ? {} : { sort_number: String(product.sortNumber) },
+		metadata: {
+			...product.metadata,
+			...(product.sortNumber !== undefined && { sort_number: String(product.sortNumber) })
+		},
 		default_price: product.price
 			? {
 					id: product.price.id,

@@ -1,36 +1,31 @@
 <script lang="ts">
-	import appleBadge from '#lib/assets/listen-on/listen-on-apple-podcasts.svg';
-	import castroBadge from '#lib/assets/listen-on/listen-on-castro.svg';
-	import goodpodsBadge from '#lib/assets/listen-on/listen-on-goodpods.svg';
-	import overcastBadge from '#lib/assets/listen-on/listen-on-overcast.svg';
-	import pocketCastsBadge from '#lib/assets/listen-on/listen-on-pocket-casts.svg';
-	import spotifyBadge from '#lib/assets/listen-on/listen-on-spotify.svg';
-	import ApplePodcastsEmbed from '#lib/components/ApplePodcastsEmbed.svelte';
+	import ArrowLink from '#lib/components/ArrowLink.svelte';
 	import AskQuestion from '#lib/components/AskQuestion.svelte';
-	import Hero from '#lib/components/Hero.svelte';
+	import Button from '#lib/components/Button.svelte';
+	import EpisodeRow from '#lib/components/EpisodeRow.svelte';
+	import GuestCard from '#lib/components/GuestCard.svelte';
+	import LinkList from '#lib/components/LinkList.svelte';
 	import SectionHeading from '#lib/components/SectionHeading.svelte';
 	import Seo from '#lib/components/Seo.svelte';
-	import { LINKS, SITE } from '#lib/site.js';
+	import { FEATURED_GUESTS, GUEST_GROUPS, guestsIn } from '#lib/guests.js';
+	import { LISTEN_ON } from '#lib/site.js';
 	import { breadcrumbs, podcastSeries } from '#lib/structured-data.js';
+	import type { PageProps } from './$types';
 
-	// Apple's badge is the official one from Apple Marketing Tools; the rest are Podlink's
-	// matching dark badges (https://github.com/TeamPodlink/badges). Widths are at 40px tall.
-	const PLATFORMS = [
-		{ name: 'Apple Podcasts', badge: appleBadge, width: 126, href: LINKS.applePodcasts },
-		{ name: 'Spotify', badge: spotifyBadge, width: 106, href: LINKS.spotify },
-		{ name: 'Overcast', badge: overcastBadge, width: 121, href: LINKS.overcast },
-		{ name: 'Pocket Casts', badge: pocketCastsBadge, width: 155, href: LINKS.pocketCasts },
-		{ name: 'Castro', badge: castroBadge, width: 102, href: LINKS.castro },
-		{ name: 'Goodpods', badge: goodpodsBadge, width: 133, href: LINKS.goodpods }
-	];
+	let { data }: PageProps = $props();
 
-	const DESCRIPTION =
-		'A weekly podcast covering Golden Hurricane athletics at The University of Tulsa.';
+	/** A taste of the deeper guest list: the first few from each group, past the headliners. */
+	const featuredNames = new Set(FEATURED_GUESTS.map((guest) => guest.name));
+	const BENCH = GUEST_GROUPS.slice(0, 5).flatMap((group) =>
+		guestsIn(group)
+			.filter((guest) => !featuredNames.has(guest.name))
+			.slice(0, 3)
+	);
 </script>
 
 <Seo
 	title="Podcast"
-	description={DESCRIPTION}
+	description="A weekly podcast covering Golden Hurricane athletics at The University of Tulsa, with guests including TU's president, athletic director and head coaches."
 	jsonLd={[
 		podcastSeries(),
 		breadcrumbs([
@@ -40,83 +35,83 @@
 	]}
 />
 
-{#snippet guest(href: string, label: string)}
-	<a {href} target="_blank" rel="noopener noreferrer">{label}</a>
-{/snippet}
+<header class="page grid gap-10 pt-14 pb-16 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
+	<div>
+		<h1 class="display text-d1">The podcast</h1>
+		<p class="mt-5 max-w-2xl text-lead">
+			Since August 2018 we’ve recapped every Tulsa football game, most of basketball season and a
+			good number of things in between. New episodes land every week in season.
+		</p>
+		<div class="mt-8 flex flex-wrap gap-3">
+			<AskQuestion />
+			<Button href="/podcast/episodes/" variant="primary" size="lg">
+				Browse all {data.count} episodes
+			</Button>
+			<Button href="/podcast/guests/" variant="quiet" size="lg">See every guest</Button>
+		</div>
+	</div>
+	<nav aria-labelledby="follow">
+		<h2 id="follow" class="mb-3 text-sm font-semibold text-muted">Follow for free</h2>
+		<LinkList links={LISTEN_ON} />
+	</nav>
+</header>
 
-<Hero title={SITE.name}>
-	{#snippet lead()}
-		{DESCRIPTION}
-	{/snippet}
+<section
+	aria-labelledby="guests-title"
+	id="guests"
+	class="scroll-mt-16 bg-royal py-16 sm:py-20 dark:bg-chrome"
+>
+	<div class="page">
+		<div class="mb-10 max-w-3xl">
+			<h2 id="guests-title" class="display text-d1 text-white!">
+				The people who run the place have been on the show.
+			</h2>
+			<p class="mt-4 text-lead text-on-chrome-muted">
+				The president, the athletic director and three head coaches, on the record with two fans who
+				still can’t quite believe they said yes.
+			</p>
+		</div>
+		<ul
+			class="-mx-(--gutter) flex snap-x snap-mandatory scroll-px-(--gutter) gap-4 overflow-x-auto px-(--gutter) pt-1 pb-4 lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0"
+		>
+			{#each FEATURED_GUESTS as guest (guest.slug)}
+				<li class="w-64 shrink-0 snap-start lg:w-auto">
+					<GuestCard {guest} appearances={data.appearances[guest.slug]} />
+				</li>
+			{/each}
+		</ul>
+	</div>
+</section>
 
-	<AskQuestion />
-
-	<ul class="mt-4 flex flex-wrap gap-2.5" aria-label="Listen on">
-		{#each PLATFORMS as { name, badge, width, href } (name)}
-			<li>
-				<a {href} target="_blank" rel="noopener noreferrer" class="block">
-					<img src={badge} alt="Listen on {name}" {width} height="40" class="block h-10 w-auto" />
-				</a>
+<section
+	aria-labelledby="bench"
+	class="page grid gap-10 py-16 sm:py-20 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]"
+>
+	<div>
+		<h2 id="bench" class="display text-d2">And a deep bench.</h2>
+		<p class="mt-3 text-lead text-muted">
+			Beat writers, former players, the Voice of the Golden Hurricane and a rival-site blogger
+			nearly every game week.
+		</p>
+		<ArrowLink href="/podcast/guests/" class="mt-5">See every guest</ArrowLink>
+	</div>
+	<ul class="grid grid-cols-2 border-t border-line sm:grid-cols-3">
+		{#each BENCH as guest (guest.name)}
+			<li class="border-b border-line py-3 pr-3">
+				<p class="font-display text-xl leading-tight font-extrabold text-heading">{guest.name}</p>
+				{#if guest.role}<p class="text-sm text-muted">{guest.role}</p>{/if}
 			</li>
 		{/each}
 	</ul>
-</Hero>
+</section>
 
-<div class="mx-auto max-w-content space-y-4 px-4 pb-12 sm:px-8">
-	<p>
-		Tune in as we discuss Tulsa athletics with TU figures including
-		{@render guest(
-			'https://utulsa.edu/about/leadership/president/stacy-leeds/',
-			'President Stacy Leeds'
-		)},
-		{@render guest('https://en.wikipedia.org/wiki/Brad_Carson', 'former President Brad Carson')},
-		{@render guest(
-			'https://utulsa.edu/about/leadership/executive-staff/justin-moore/',
-			'AD Justin Moore'
-		)},
-		{@render guest(
-			'https://tulsahurricane.com/staff-directory/tre-lamb/2657',
-			'Head Football Coach Tre Lamb'
-		)},
-		{@render guest(
-			'https://tulsahurricane.com/staff-directory/eric-konkol/2458',
-			"Head Men's Basketball Coach Eric Konkol"
-		)},
-		{@render guest(
-			'https://tulsahurricane.com/sports/womens-basketball/roster/coaches/angie-nelp/1685',
-			"Head Women's Basketball Coach Angie Nelp"
-		)},
-		{@render guest(
-			'https://tulsahurricane.com/sports/football/roster/dane-evans/5365',
-			'QB Dane Evans'
-		)}, and
-		{@render guest(
-			'https://tulsahurricane.com/sports/football/roster/trevis-gipson/8011',
-			'DE Trevis Gipson'
-		)}, media personalities such as
-		{@render guest('https://tulsahurricane.com/staff-directory/bruce-howard/25', 'Bruce Howard')},
-		{@render guest('https://www.kjrh.com/cayden-mcfarland', 'Cayden McFarland')}, and
-		{@render guest('https://tulsaworld.com/users/profile/kelly%20hines/', 'Kelly Hines')}, and
-		conference foes like Tulane's
-		{@render guest('https://twitter.com/FearTheWaveBlog', 'Fear the Wave')}, ECU's
-		{@render guest('https://twitter.com/BoneyardPodcast', 'Boneyard Podcast')}, and USF's
-		{@render guest('https://x.com/SteegLife', 'Bay Area Examiner')}.
-	</p>
-
-	<p>
-		All of our episodes are available on the web via
-		<a href={LINKS.spotifyCreators} target="_blank" rel="noopener noreferrer"
-			>Spotify for Creators</a
-		>.
-	</p>
-
-	<p>
-		You can also find our podcast on Apple Podcasts, Spotify, Overcast, Pocket Casts, Castro,
-		Goodpods, and more. Just search for 'The Golden Hurricast'.
-	</p>
-
-	<section aria-labelledby="listen" class="pt-8">
-		<SectionHeading id="listen">Listen to the Show</SectionHeading>
-		<ApplePodcastsEmbed />
-	</section>
-</div>
+<section aria-labelledby="latest" class="page pb-16 sm:pb-20">
+	<SectionHeading id="latest" more={{ href: '/podcast/episodes/', label: 'The full archive' }}>
+		Latest episodes
+	</SectionHeading>
+	<ol class="grid gap-3">
+		{#each data.latest as episode (episode.slug)}
+			<li><EpisodeRow {episode} /></li>
+		{/each}
+	</ol>
+</section>

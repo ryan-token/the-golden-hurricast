@@ -15,11 +15,14 @@ const SECURITY_HEADERS = {
 const PRIMARY_ORIGIN = 'https://www.thegoldenhurricast.com';
 const ALIAS_HOSTS = new Set(['www.goldenhurricast.com', 'thegoldenhurricast.netlify.com']);
 
-// URLs from the Gatsby site that still have an equivalent. Its other files (header logo,
+// Retired URLs that still have an equivalent. The Gatsby site's other files (header logo,
 // brand icons, badges, the About photo) were page decoration with no counterpart: they 404.
 const OLD_PATHS = new Map([
 	['/merch-success', '/merch/'],
 	['/merch-success/', '/merch/'],
+	// The support page became a section of the About page.
+	['/support', '/about/#support'],
+	['/support/', '/about/#support'],
 	['/patreon.png', '/blog_images/patreon/patreon-tiers.png'],
 	// WebP copies of icons that are now PNG only.
 	...[

@@ -4,8 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 // and the honeypot path, which is dropped before the Hurricast API is called.
 
 async function openDialog(page: Page) {
-	await page.getByRole('button', { name: 'Ask a Question for the Show' }).click();
-	const dialog = page.getByRole('dialog', { name: 'Ask a Question' });
+	await page.getByRole('button', { name: 'Ask a question' }).first().click();
+	const dialog = page.getByRole('dialog', { name: 'Got a question for the show?' });
 	await expect(dialog).toBeVisible();
 	return dialog;
 }
@@ -18,39 +18,38 @@ test('the question dialog opens, validates without submitting, and closes', asyn
 
 	await page.goto('/');
 	const dialog = await openDialog(page);
-	const question = dialog.getByLabel('What is your question for us?');
+	const question = dialog.getByLabel('Your question');
 
 	// Empty: the browser's own validation stops the submission.
-	await dialog.getByRole('button', { name: 'Submit' }).click();
+	await dialog.getByRole('button', { name: 'Send question' }).click();
 	expect(await question.evaluate((el: HTMLTextAreaElement) => el.validity.valueMissing)).toBe(true);
 
 	// Only whitespace: caught before anything is sent.
 	await question.fill('   ');
-	await dialog.getByRole('button', { name: 'Submit' }).click();
+	await dialog.getByRole('button', { name: 'Send question' }).click();
 	await expect(dialog.getByText('Please enter a question.')).toBeVisible();
 	await expect(question).toHaveAttribute('aria-invalid', 'true');
 	await expect(question).toBeFocused();
 	expect(submissions).toEqual([]);
 
-	await dialog.getByRole('button', { name: 'Close' }).last().click();
+	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(dialog).toBeHidden();
 });
 
-test('thanks the listener in the dialog, then closes it', async ({ page }) => {
-	await page.clock.install();
+test('thanks the listener in the dialog', async ({ page }) => {
 	await page.goto('/');
 	const dialog = await openDialog(page);
-	const question = dialog.getByLabel('What is your question for us?');
+	const question = dialog.getByLabel('Your question');
 
 	await question.fill('Who starts at quarterback?');
 	// The honeypot keeps the question from going upstream; the endpoint still answers ok.
-	await page.locator('#ask-question-website').fill('x', { force: true });
-	await dialog.getByRole('button', { name: 'Submit' }).click();
+	await dialog.locator('input[name="website"]').fill('x', { force: true });
+	await dialog.getByRole('button', { name: 'Send question' }).click();
 
-	await expect(dialog.getByText(/Thanks for submitting a question/)).toBeVisible();
-	await expect(question).toBeHidden();
-	await page.clock.runFor(4000);
-	await expect(dialog).toBeHidden();
+	const thanks = page.getByRole('dialog', { name: 'It’s in the mailbag.' });
+	await expect(thanks.getByText('“Who starts at quarterback?”')).toBeVisible();
+	await thanks.getByRole('button', { name: 'Done' }).click();
+	await expect(thanks).toBeHidden();
 
 	// Reopening starts a fresh, empty form.
 	await openDialog(page);
@@ -66,10 +65,13 @@ test('clicking the backdrop closes the dialog where closedby is unsupported (Saf
 		delete (HTMLDialogElement.prototype as { closedBy?: string }).closedBy;
 	});
 	await page.goto('/');
-	await page.locator('dialog').evaluate((dialog) => dialog.removeAttribute('closedby'));
+	await page
+		.locator('dialog')
+		.first()
+		.evaluate((dialog) => dialog.removeAttribute('closedby'));
 
 	const dialog = await openDialog(page);
-	const question = dialog.getByLabel('What is your question for us?');
+	const question = dialog.getByLabel('Your question');
 	await expect(dialog).toHaveCSS('opacity', '1');
 
 	// Clicking inside, or selecting text and letting go over the backdrop, keeps it open.
@@ -148,10 +150,10 @@ test.describe('the questions endpoint', () => {
 
 	test('the confirmation page explains the outcome', async ({ page }) => {
 		await page.goto('/question-received/?error=invalid');
-		await expect(page.locator('h1')).toHaveText('Your question was not sent');
+		await expect(page.locator('h1')).toHaveText('Your question wasn’t sent');
 		await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
 
 		await page.goto('/question-received/');
-		await expect(page.locator('h1')).toHaveText('Question received');
+		await expect(page.locator('h1')).toHaveText('It’s in the mailbag.');
 	});
 });

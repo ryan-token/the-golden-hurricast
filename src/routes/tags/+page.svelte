@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageHeader from '#lib/components/PageHeader.svelte';
 	import Seo from '#lib/components/Seo.svelte';
 	import { breadcrumbs } from '#lib/structured-data.js';
 	import type { PageProps } from './$types';
@@ -16,16 +17,21 @@
 	])}
 />
 
-<div class="mx-auto max-w-content px-4 pt-12 pb-12 sm:px-8 sm:pt-16">
-	<h1 class="mb-6 text-h2">Tags</h1>
-	<p>Click on any of the tags below to see all the posts we've written about that category.</p>
-	<hr />
-	<ul class="list-disc pl-8 leading-relaxed">
-		{#each data.tags as tag (tag)}
-			<li>
-				<a href="/tags/{encodeURIComponent(tag)}/" class="text-lg font-bold">{tag}</a>
-			</li>
-		{/each}
-	</ul>
-	<p class="mt-8"><a href="/blog/">← All posts</a></p>
-</div>
+<PageHeader title="Tags" back={{ href: '/blog/', label: 'Hurc’s Corner' }}>
+	{#snippet lead()}
+		Every topic we wrote about on the blog.
+	{/snippet}
+</PageHeader>
+
+<ul class="page flex flex-wrap gap-2 pb-16 sm:pb-20">
+	{#each data.tags as tag (tag)}
+		<li>
+			<a
+				href="/tags/{encodeURIComponent(tag)}/"
+				class="inline-flex h-10 items-center rounded-full border border-line-strong bg-surface px-4 font-semibold text-heading transition-colors hover:border-heading"
+			>
+				{tag}
+			</a>
+		</li>
+	{/each}
+</ul>

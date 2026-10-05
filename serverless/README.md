@@ -111,7 +111,7 @@ npm run orders -- --stage prod --due                         # orders the sweepe
 npm run questions -- --stage prod                            # recent listener questions
 ```
 
-A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata.
+A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata. Sizes of one item are separate products (each with its own stock) that share a `group` metadata value, the name shown on the site (e.g. `Hurricast T-Shirt`), and each have a `size` (e.g. `XL`): the site shows them as one card with a size picker.
 
 ## Deploying
 

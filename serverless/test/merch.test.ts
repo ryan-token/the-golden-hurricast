@@ -16,6 +16,7 @@ const SHIRT = {
 	id: 'prod_shirtL',
 	name: 'Hurricast T-Shirt (large)',
 	sortNumber: 12,
+	metadata: { group: 'Hurricast T-Shirt', size: 'L' },
 	price: { id: 'price_shirt', unitAmount: 2700 }
 };
 const MUG = {
@@ -72,7 +73,7 @@ const checkout = (quantity: number, productId = SHIRT.id, now?: Date) =>
 	createCheckout(stripe.client, { productId, quantity, origin: ORIGIN }, now);
 
 describe('catalog', () => {
-	it('lists tracked, sellable products with live stock in sort order', async () => {
+	it('lists tracked, sellable products with live stock and sizes in sort order', async () => {
 		stripe.catalog.set('prod_untracked', {
 			id: 'prod_untracked',
 			name: 'Not in inventory',
@@ -88,6 +89,8 @@ describe('catalog', () => {
 				id: SHIRT.id,
 				name: SHIRT.name,
 				image: expect.any(String),
+				group: 'Hurricast T-Shirt',
+				size: 'L',
 				unitAmount: 2700,
 				currency: 'usd',
 				available: 3,

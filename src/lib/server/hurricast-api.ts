@@ -12,6 +12,10 @@ const ProductSchema = v.object({
 	id: v.string(),
 	name: v.string(),
 	image: v.optional(v.string()),
+	/** Sizes of one item share a group, e.g. "Hurricast T-Shirt" (Stripe product metadata). */
+	group: v.optional(v.string()),
+	/** e.g. "XL" (Stripe product metadata). */
+	size: v.optional(v.string()),
 	/** In the currency's minor unit (cents). */
 	unitAmount: v.pipe(v.number(), v.integer()),
 	currency: v.string(),
