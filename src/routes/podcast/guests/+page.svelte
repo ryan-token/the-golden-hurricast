@@ -40,7 +40,7 @@
 	</ul>
 {/snippet}
 
-<PageHeader title="Everyone who’s pulled up a chair" back={{ href: '/podcast/', label: 'Podcast' }}>
+<PageHeader title="Every guest we’ve ever had" back={{ href: '/podcast/', label: 'Podcast' }}>
 	{#snippet lead()}
 		University leadership, coaches, former players, the people who cover Tulsa for a living, and our
 		counterparts around the American and beyond. Each one links to the episodes they were on.

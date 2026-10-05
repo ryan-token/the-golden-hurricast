@@ -15,6 +15,9 @@ export const SITE = {
 export const LINKS = {
 	applePodcasts:
 		'https://podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?itscg=30200&itsct=podcast_box&ls=1&mttnsubad=1435008302',
+	/** The show's Ratings & Reviews in Apple Podcasts (`see-all=reviews` is undocumented but long-standing). */
+	applePodcastsReviews:
+		'https://podcasts.apple.com/us/podcast/the-golden-hurricast/id1435008302?see-all=reviews',
 	spotify: 'https://open.spotify.com/show/16ik0AuBrpVBfWn73jlJio',
 	spotifyCreators: 'https://creators.spotify.com/pod/show/thegoldenhurricast',
 	spotifySupport: 'https://creators.spotify.com/pod/show/thegoldenhurricast/support',

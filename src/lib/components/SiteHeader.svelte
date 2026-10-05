@@ -32,14 +32,17 @@
 </script>
 
 <header class="sticky top-0 z-40 bg-chrome text-on-chrome [view-transition-name:header]">
-	<div class="page flex h-16 items-center gap-6">
+	<div class="page flex h-16 items-center gap-3 sm:gap-6">
 		<a
 			href="/"
 			aria-current={page.url.pathname === '/' ? 'page' : undefined}
-			class="mr-auto flex items-center gap-3"
+			class="mr-auto flex min-w-0 items-center gap-2.5 sm:gap-3"
 		>
 			<Crest class="size-10" sizes="40px" priority />
-			<span class="font-display text-[1.375rem] font-extrabold tracking-[0.005em]">{SITE.name}</span
+			<!-- One line on the narrowest phones too, a size smaller there. -->
+			<span
+				class="font-display text-xl font-extrabold tracking-[0.005em] whitespace-nowrap min-[22.5rem]:text-[1.375rem]"
+				>{SITE.name}</span
 			>
 		</a>
 

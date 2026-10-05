@@ -8,7 +8,7 @@ const PAGES = [
 	{ path: '/podcast/', h1: 'The podcast' },
 	{ path: '/podcast/episodes/', h1: 'Every episode' },
 	{ path: '/podcast/episodes/1-1-stay-golden/', h1: 'Stay Golden' },
-	{ path: '/podcast/guests/', h1: 'Everyone who’s pulled up a chair' },
+	{ path: '/podcast/guests/', h1: 'Every guest we’ve ever had' },
 	{ path: '/blog/', h1: 'Hurc’s Corner' },
 	{ path: '/about/', h1: 'Two alums, one time zone away.' },
 	{ path: '/tags/', h1: 'Tags' },
@@ -104,6 +104,23 @@ for (const path of ['/podcast/', '/podcast/guests/']) {
 		await expect(sheet).toBeVisible();
 		await sheet.getByRole('button', { name: 'Close' }).click();
 		await expect(sheet).toBeHidden();
+	});
+}
+
+for (const path of ['/podcast/', '/about/']) {
+	test(`${path} offers a review on Apple Podcasts or Spotify`, async ({ page }) => {
+		await page.goto(path);
+		await page.getByRole('button', { name: /Leave a 5-star review/ }).click();
+
+		const sheet = page.getByRole('dialog', { name: 'Leave us a 5-star review' });
+		await expect(sheet.getByRole('link', { name: /Apple Podcasts/ })).toHaveAttribute(
+			'href',
+			/id1435008302\?see-all=reviews$/
+		);
+		await expect(sheet.getByRole('link', { name: /Spotify/ })).toHaveAttribute(
+			'href',
+			'https://open.spotify.com/show/16ik0AuBrpVBfWn73jlJio'
+		);
 	});
 }
 

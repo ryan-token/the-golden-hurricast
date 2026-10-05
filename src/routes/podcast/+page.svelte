@@ -4,6 +4,7 @@
 	import Button from '#lib/components/Button.svelte';
 	import EpisodeRow from '#lib/components/EpisodeRow.svelte';
 	import GuestCard from '#lib/components/GuestCard.svelte';
+	import LeaveReview from '#lib/components/LeaveReview.svelte';
 	import LinkList from '#lib/components/LinkList.svelte';
 	import SectionHeading from '#lib/components/SectionHeading.svelte';
 	import Seo from '#lib/components/Seo.svelte';
@@ -42,12 +43,19 @@
 			Since August 2018 we’ve recapped every Tulsa football game, basketball game, and a good number
 			of things in between. New episodes land every week in season.
 		</p>
-		<div class="mt-8 flex flex-wrap gap-3">
-			<AskQuestion />
-			<Button href="/podcast/episodes/" variant="primary" size="lg">
-				Browse all {data.count} episodes
-			</Button>
-			<Button href="/podcast/guests/" variant="quiet" size="lg">Browse every guest</Button>
+		<!-- Grouped by intent: the pages to explore (filled), then quick ways to join in (outlined,
+		     with gold discs for buttons that open a sheet). On phones each button fills its row. -->
+		<div class="mt-8 grid gap-5">
+			<div class="flex flex-wrap gap-3 max-sm:*:grow">
+				<Button href="/podcast/episodes/" variant="primary" size="lg">
+					Browse all {data.count} episodes
+				</Button>
+				<Button href="/podcast/guests/" variant="primary" size="lg">Browse every guest</Button>
+			</div>
+			<div class="flex flex-wrap gap-3 max-sm:*:grow">
+				<AskQuestion />
+				<LeaveReview />
+			</div>
 		</div>
 	</div>
 	<nav aria-labelledby="follow">

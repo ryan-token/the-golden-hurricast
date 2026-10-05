@@ -4,6 +4,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import LinkList from '#lib/components/LinkList.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
+	import ReviewSheet from '#lib/components/ReviewSheet.svelte';
 	import Seo from '#lib/components/Seo.svelte';
 	import { episodePath } from '#lib/episodes.js';
 	import { LINKS, SITE } from '#lib/site.js';
@@ -83,7 +84,14 @@
 		}
 	];
 
+	const REVIEW_SHEET = 'review';
+
 	const WAYS_TO_SUPPORT = [
+		{
+			name: 'Leave a 5-star review',
+			commandfor: REVIEW_SHEET,
+			detail: 'On Apple Podcasts or Spotify. It’s free, and it helps other fans find us'
+		},
 		{
 			name: 'Recurring support on Spotify',
 			href: LINKS.spotifySupport,
@@ -226,6 +234,7 @@
 		<div>
 			<h3 class="mb-3 text-sm font-semibold text-on-chrome-muted">Other ways to help</h3>
 			<LinkList links={WAYS_TO_SUPPORT} class="text-ink" />
+			<ReviewSheet id={REVIEW_SHEET} />
 		</div>
 	</div>
 </section>

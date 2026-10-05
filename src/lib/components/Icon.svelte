@@ -24,7 +24,8 @@
 			'<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M20 4v3.5h-3.5"/><text x="12" y="15.4" fill="currentColor" stroke="none" font-size="8" font-weight="700" text-anchor="middle" font-family="system-ui">30</text>',
 		minus: '<path d="M6 12h12"/>',
 		plus: '<path d="M6 12h12M12 6v12"/>',
-		ruler: '<path d="M3 15.5 15.5 3 21 8.5 8.5 21z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/>'
+		ruler: '<path d="M3 15.5 15.5 3 21 8.5 8.5 21z"/><path d="m7 12 2 2M10 9l2 2M13 6l2 2"/>',
+		star: '<path fill="currentColor" stroke-width="1.5" d="m12 3.2 2.7 5.5 6 .9-4.35 4.25 1.03 6L12 17l-5.38 2.85 1.03-6L3.3 9.6l6-.9Z"/>'
 	};
 
 	export type IconName = keyof typeof ICONS;
