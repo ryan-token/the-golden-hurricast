@@ -41,7 +41,8 @@
 	}
 
 	body {
-		@apply bg-white font-sans text-base leading-normal text-ink antialiased;
+		/* No `antialiased`: on macOS it renders text noticeably thinner than the old site did. */
+		@apply bg-white font-sans text-base leading-normal text-ink;
 	}
 
 	h1,
@@ -108,6 +109,8 @@ a {
 /* Blog posts style text and links like the rest of the site. */
 .prose {
 	--tw-prose-body: var(--color-ink);
+	--tw-prose-headings: var(--color-ink);
+	--tw-prose-bold: var(--color-ink);
 	--tw-prose-links: var(--color-primary);
 }
 .prose a {
