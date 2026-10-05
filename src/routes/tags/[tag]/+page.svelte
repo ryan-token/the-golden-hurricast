@@ -12,7 +12,7 @@
 
 <Seo
 	title="Posts about {data.tag}"
-	description="Every post on The Golden Hurricast blog about {data.tag}."
+	description="Every Hurc’s Corner post about {data.tag}, from The Golden Hurricast’s blog archive."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'Blog', path: '/blog/' },

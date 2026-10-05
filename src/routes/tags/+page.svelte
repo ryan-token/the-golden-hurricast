@@ -9,7 +9,7 @@
 
 <Seo
 	title="Tags"
-	description="Browse The Golden Hurricast blog by topic, from football and basketball to Golden Hurristats."
+	description="Browse the Hurc’s Corner blog archive by topic, from football and basketball to Golden Hurristats."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'Blog', path: '/blog/' },

@@ -12,7 +12,7 @@
 
 <Seo
 	title="Blog"
-	description="Hurc's Corner, The Golden Hurricast's blog from 2019 to 2024: stats deep dives, TU history, and Golden Hurricane milestones."
+	description="Hurc’s Corner, The Golden Hurricast’s blog from 2019 to 2024: stat deep dives, TU history, and Golden Hurricane milestones."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'Blog', path: '/blog/' }

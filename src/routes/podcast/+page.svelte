@@ -26,7 +26,7 @@
 
 <Seo
 	title="Podcast"
-	description="A weekly podcast covering Golden Hurricane athletics at The University of Tulsa, with guests including TU's president, athletic director, and head coaches."
+	description="A weekly podcast on Golden Hurricane athletics: every Tulsa football and basketball game recapped, with guests including TU’s president, AD, and head coaches."
 	jsonLd={[
 		podcastSeries(),
 		breadcrumbs([

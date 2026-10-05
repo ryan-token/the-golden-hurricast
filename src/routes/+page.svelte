@@ -16,7 +16,10 @@
 	let { data }: PageProps = $props();
 </script>
 
-<Seo jsonLd={[organization(), website()]} />
+<Seo
+	description="Golden Hurricane talk every week since 2018: game recaps, opponent previews, and interviews with TU’s president, athletic director, and head coaches."
+	jsonLd={[organization(), website()]}
+/>
 
 <svelte:head>
 	<!-- IndieWeb / Mastodon identity verification. -->

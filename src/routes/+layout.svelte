@@ -7,6 +7,7 @@
 	import SiteFooter from '#lib/components/SiteFooter.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
 	import { Player, setPlayer } from '#lib/player.svelte.js';
+	import { LINKS, SITE } from '#lib/site.js';
 	import { syncTheme } from '#lib/theme.svelte.js';
 	import type { LayoutProps } from './$types';
 
@@ -42,6 +43,8 @@
 
 <svelte:head>
 	<link rel="preload" href={font} as="font" type="font/woff2" crossorigin="anonymous" />
+	<!-- Lets podcast apps and feed readers find the show from any page. -->
+	<link rel="alternate" type="application/rss+xml" title={SITE.name} href={LINKS.rss} />
 </svelte:head>
 
 <a

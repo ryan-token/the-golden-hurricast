@@ -46,7 +46,7 @@
 
 <Seo
 	title="Merch"
-	description="Hurricast t-shirts, hoodies, mugs, and stickers, made with Mythic here in Tulsa."
+	description="T-shirts, hoodies, mugs, and stickers with The Golden Hurricast’s logo, made with Mythic in Tulsa. Shipping is included in every price."
 	jsonLd={[
 		...items.map((item) =>
 			productJsonLd({

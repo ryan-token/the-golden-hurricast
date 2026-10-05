@@ -8,8 +8,11 @@ export const SITE = {
 	email: 'thegoldenhurricast@gmail.com',
 	xHandle: '@GoldenHurricast',
 	blueskyHandle: '@thegoldenhurricast.com',
-	/** Default 1200×630 share image, relative to the site root. */
-	ogImage: '/og-image.png'
+	/** What the show is, for the home page's title. */
+	tagline: 'Tulsa Golden Hurricane Podcast',
+	/** Default share image, relative to the site root. Rename it when it changes: link previews are cached by URL. */
+	ogImage: '/share.png',
+	ogImageSize: { width: 1200, height: 630 }
 } as const;
 
 export const LINKS = {

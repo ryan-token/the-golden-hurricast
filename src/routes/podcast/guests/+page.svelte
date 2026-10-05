@@ -16,7 +16,7 @@
 
 <Seo
 	title="Guests"
-	description="Everyone who has been on The Golden Hurricast: TU's president, athletic directors and head coaches, former players, Tulsa media, and our friends around the American and beyond."
+	description="Every guest on The Golden Hurricast, from TU’s president, athletic director, and head coaches to former players, Tulsa media, and friends around the American."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'Podcast', path: '/podcast/' },

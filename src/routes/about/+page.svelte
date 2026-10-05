@@ -116,7 +116,7 @@
 
 <Seo
 	title="About"
-	description="The Golden Hurricast is an independent podcast about Golden Hurricane athletics by Ryan Token and Matt Rechtien, two TU alums. Here's our story, and how to support the show."
+	description="The Golden Hurricast is Ryan Token and Matt Rechtien, two TU alums talking Golden Hurricane athletics since 2018. Our story, and how to support the show."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'About', path: '/about/' }
