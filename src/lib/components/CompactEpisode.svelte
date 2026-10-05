@@ -21,7 +21,9 @@
 
 <div class="flex items-center gap-3 py-3">
 	<PlayButton {episode} size="sm" />
-	<div class="min-w-0 flex-1 leading-snug">
+	<!-- Sized by the space it's given, never by its text: a long title truncates rather than
+	     widening whatever list holds it. -->
+	<div class="min-w-0 flex-1 leading-snug contain-inline-size">
 		<a
 			href={episodePath(episode.slug)}
 			class="block truncate font-semibold text-heading hover:underline"

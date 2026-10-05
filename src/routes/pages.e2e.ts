@@ -175,13 +175,22 @@ test.describe('at phone width', () => {
 		await expect(page).toHaveURL('/podcast/');
 		await expect(podcastLink).toBeHidden();
 	});
+});
+
+// The narrowest phones still in use. Long episode titles and links are what tend to push a
+// layout wider than the screen, so the pages with the longest ones are listed.
+test.describe('at the narrowest phone width', () => {
+	test.use({ viewport: { width: 320, height: 640 } });
+
+	const overflow = (element: Element) => element.scrollWidth - element.clientWidth;
 
 	test('pages do not scroll sideways', async ({ page }) => {
 		for (const path of [
 			'/',
 			'/podcast/',
 			'/podcast/episodes/',
-			'/podcast/episodes/9-1-punching-above-our-weight/',
+			'/podcast/episodes/9-6-three-rounds-of-drano/',
+			'/podcast/episodes/7-16-tu-head-football-coach-tre-lamb-joins-the-podcast/',
 			'/podcast/guests/',
 			'/merch/',
 			'/blog/',
@@ -189,10 +198,19 @@ test.describe('at phone width', () => {
 			'/tags/'
 		]) {
 			await page.goto(path);
-			const overflow = await page.evaluate(
-				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
-			);
-			expect(overflow, path).toBe(0);
+			expect(await page.locator('html').evaluate(overflow), path).toBe(0);
+		}
+	});
+
+	test('sheets do not scroll sideways', async ({ page }) => {
+		for (const path of ['/podcast/', '/merch/']) {
+			await page.goto(path);
+			for (const sheet of await page.locator('dialog').all()) {
+				await sheet.evaluate((dialog: HTMLDialogElement) => dialog.showModal());
+				const id = await sheet.getAttribute('id');
+				expect(await sheet.evaluate(overflow), `${path} #${id}`).toBe(0);
+				await sheet.evaluate((dialog: HTMLDialogElement) => dialog.close());
+			}
 		}
 	});
 });

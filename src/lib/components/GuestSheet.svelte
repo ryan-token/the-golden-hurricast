@@ -24,7 +24,8 @@
 </script>
 
 <Sheet {id} labelledby="{id}-name" width="lg">
-	<div class="grid sm:grid-cols-[15rem_1fr]">
+	<!-- minmax(0, …): a long episode title truncates rather than widening the sheet. -->
+	<div class="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[15rem_minmax(0,1fr)]">
 		<enhanced:img
 			src={GUEST_PHOTOS[guest.slug]}
 			alt=""
@@ -62,7 +63,8 @@
 			</ul>
 
 			<Button href={guest.bioUrl} target="_blank" rel="noopener" variant="quiet" class="mt-5">
-				Official bio on {bioSite}
+				<!-- The site name is dropped from sight on the narrowest phones, where it won't fit. -->
+				<span>Official bio<span class="max-[24rem]:sr-only"> on {bioSite}</span></span>
 				<Icon name="external" class="size-4" />
 				<span class="sr-only">(opens in a new tab)</span>
 			</Button>

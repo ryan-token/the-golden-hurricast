@@ -95,18 +95,21 @@
 		</div>
 
 		{#if sized}
-			<fieldset class="relative" {@attach adoptEarlyChoice}>
-				<legend class="mb-2 font-semibold">Size</legend>
-				{#if sizeChart}
-					<button
-						type="button"
-						commandfor={sizeChart}
-						command="show-modal"
-						class="absolute top-0 right-0 inline-flex items-center gap-1.5 text-sm font-semibold text-link hover:underline"
-					>
-						<Icon name="ruler" class="size-4" /> Size chart
-					</button>
-				{/if}
+			<!-- Labelled by its heading rather than a <legend>, so the size chart can share its row. -->
+			<fieldset aria-labelledby="size-{item.key}" {@attach adoptEarlyChoice}>
+				<div class="mb-2 flex items-baseline justify-between gap-4">
+					<span id="size-{item.key}" class="font-semibold">Size</span>
+					{#if sizeChart}
+						<button
+							type="button"
+							commandfor={sizeChart}
+							command="show-modal"
+							class="inline-flex items-center gap-1.5 text-sm font-semibold text-link hover:underline"
+						>
+							<Icon name="ruler" class="size-4" /> Size chart
+						</button>
+					{/if}
+				</div>
 				<div class="flex flex-wrap gap-2">
 					{#each item.variants as variant (variant.id)}
 						{@const out = variant.available < 1}

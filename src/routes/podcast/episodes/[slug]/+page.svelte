@@ -150,16 +150,18 @@
 		</div>
 	</header>
 
-	<div class="page grid gap-12 py-12 sm:py-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16">
-		<section aria-labelledby="notes">
+	<div
+		class="page grid grid-cols-[minmax(0,1fr)] gap-12 py-12 sm:py-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16"
+	>
+		<section aria-labelledby="notes" class="min-w-0">
 			<h2 id="notes" class="display text-d3">Show notes</h2>
-			<div class="notes prose mt-4 max-w-none prose-p:my-3" {@attach chapters}>
+			<div class="notes prose mt-4 max-w-none wrap-anywhere prose-p:my-3" {@attach chapters}>
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized in #lib/server/episodes -->
 				{@html notes}
 			</div>
 		</section>
 
-		<aside class="grid content-start gap-8">
+		<aside class="grid min-w-0 content-start gap-8">
 			{#if episode.guest}
 				<section aria-labelledby="guest" class="rounded-lg border border-line bg-surface p-5">
 					<h2 id="guest" class="text-sm font-semibold text-muted">On the mic</h2>

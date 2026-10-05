@@ -132,7 +132,9 @@
 								><span class="sr-only">Measurement</span></th
 							>
 							{#each chart.sizes as size (size)}
-								<th scope="col" class="px-2 py-2 text-center font-display text-lg font-extrabold"
+								<th
+									scope="col"
+									class="px-1 py-2 text-center font-display text-lg font-extrabold sm:px-2"
 									>{size}</th
 								>
 							{/each}
@@ -141,11 +143,13 @@
 					<tbody>
 						{#each chart.rows as [label, ...values] (label)}
 							<tr class="border-b border-line">
-								<th scope="row" class="min-w-36 py-2.5 pr-3 text-left font-normal text-muted"
+								<th
+									scope="row"
+									class="py-2.5 pr-2 text-left font-normal text-muted sm:min-w-36 sm:pr-3"
 									>{label}</th
 								>
 								{#each values as value, column (column)}
-									<td class="px-2 py-2.5 text-center font-semibold">{value}</td>
+									<td class="px-1 py-2.5 text-center font-semibold sm:px-2">{value}</td>
 								{/each}
 							</tr>
 						{/each}

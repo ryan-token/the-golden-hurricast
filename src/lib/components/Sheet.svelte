@@ -46,7 +46,12 @@
 	{@attach closeOnBackdropClick}
 	aria-labelledby={labelledby}
 	{onclose}
+	autofocus
+	tabindex="-1"
 	class={[
+		// Opening focuses the sheet itself rather than its first button, so a tap doesn't
+		// leave a focus ring on the close button (Safari draws one). Tab still reaches it first.
+		'focus-ring-none',
 		'm-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto overscroll-contain rounded-t-xl bg-surface text-ink shadow-float',
 		'sm:m-auto sm:max-h-[min(90dvh,48rem)] sm:w-[calc(100%-2rem)] sm:rounded-xl',
 		width === 'lg' ? 'sm:max-w-3xl' : 'sm:max-w-lg',
@@ -57,9 +62,5 @@
 		'open:backdrop:bg-night/55 starting:open:backdrop:bg-night/0'
 	]}
 >
-	<span
-		aria-hidden="true"
-		class="pointer-events-none absolute top-2 left-1/2 z-10 h-1 w-10 -translate-x-1/2 rounded-full bg-current opacity-25 sm:hidden"
-	></span>
 	{@render children()}
 </dialog>

@@ -40,7 +40,8 @@
 		{/if}
 	</div>
 
-	<div class="min-w-0 flex-1">
+	<!-- wrap-anywhere: a long word in a title or summary wraps instead of widening the row. -->
+	<div class="min-w-0 flex-1 wrap-anywhere">
 		<p class="text-sm text-muted">
 			<span class="sr-only">{episodeLabel(episode)}, </span>
 			<time datetime={episode.published}>{formatDate(episode.published)}</time> · {formatDuration(
