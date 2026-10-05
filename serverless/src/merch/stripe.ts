@@ -8,6 +8,13 @@ import { getSecret } from '../lib/secrets.ts';
  */
 export const STRIPE_API_VERSION = '2026-09-30.endive';
 
+/** Stripe says the requested object (product, Checkout Session, …) doesn't exist. */
+export function isMissing(error: unknown): boolean {
+	return (
+		error instanceof Stripe.errors.StripeInvalidRequestError && error.code === 'resource_missing'
+	);
+}
+
 let client: Promise<Stripe> | undefined;
 
 /** The Stripe client, created once per Lambda container with the key from SSM. */

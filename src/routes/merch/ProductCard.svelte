@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import Button from '#lib/components/Button.svelte';
+	import { formatMoney } from '#lib/format.js';
 	import { productImage } from '#lib/images.js';
 	import { LINKS } from '#lib/site.js';
 	import type { Product } from '#lib/server/hurricast-api.js';
@@ -27,13 +28,9 @@
 
 	const LOW_STOCK = 5;
 
-	const soldOut = $derived(product.maxQuantity < 1);
+	const soldOut = $derived(product.available < 1);
 	const lowStock = $derived(!soldOut && product.available <= LOW_STOCK);
-	const price = $derived(
-		new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency }).format(
-			product.unitAmount / 100
-		)
-	);
+	const price = $derived(formatMoney(product.unitAmount, product.currency));
 	const quantityId = $derived(`quantity-${product.id}`);
 	const image = $derived(product.image ? productImage(product.image, 200, useImageCdn) : undefined);
 </script>
@@ -73,7 +70,7 @@
 				<select
 					id={quantityId}
 					name="quantity"
-					class="w-1/2 rounded border border-line bg-white px-2 py-1"
+					class="w-1/2 rounded border border-line bg-white py-1 pr-8 pl-2"
 				>
 					{#each { length: product.maxQuantity }, index (index)}
 						<option value={index + 1}>{index + 1}</option>

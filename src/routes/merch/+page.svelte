@@ -88,7 +88,7 @@
 	{/snippet}
 </Hero>
 
-<div class="mx-auto max-w-[68rem] px-4 pb-12 sm:px-8">
+<div class="mx-auto max-w-content px-4 pb-12 sm:px-8">
 	<p class="mb-4">
 		We've teamed up with
 		<a href={LINKS.mythic} target="_blank" rel="noopener noreferrer">Mythic</a>

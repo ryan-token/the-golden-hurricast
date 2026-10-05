@@ -4,13 +4,17 @@
  * events we missed, and releases reservations whose checkout was never created.
  */
 import type Stripe from 'stripe';
-import { deferRelease, getOrder, listDueReservations, transitionOrder } from '../data/orders.ts';
+import {
+	deferRelease,
+	getOrder,
+	holdsStock,
+	listDueReservations,
+	transitionOrder
+} from '../data/orders.ts';
 import type { Order } from '../data/orders.ts';
 import { log } from '../lib/log.ts';
 import { reconcileCheckoutSession, retrieveCheckoutSession } from './reconcile.ts';
-
-const RESERVED_RECHECK_MS = 10 * 60 * 1000;
-const PROCESSING_RECHECK_MS = 24 * 60 * 60 * 1000;
+import { PROCESSING_RECHECK_MS, SWEEP_INTERVAL_MS } from './schedule.ts';
 
 export interface SweepResult {
 	checked: number;
@@ -26,7 +30,7 @@ export async function sweepReservations(stripe: Stripe, now = new Date()): Promi
 			await sweepOrder(stripe, order, now);
 		} catch (error) {
 			failed++;
-			log.error('Failed to sweep order', error, { orderId: order.orderId });
+			log.error('Failed to sweep order', { orderId: order.orderId }, error);
 		}
 	}
 
@@ -50,10 +54,7 @@ async function sweepOrder(stripe: Stripe, order: Order, now: Date) {
 		// Past its expiry but still open (shouldn't happen): close it so it can't be paid.
 		await stripe.checkout.sessions.expire(session.id).catch((error: unknown) => {
 			// It may have just completed or expired; reconciling below handles either.
-			log.warn('Could not expire Checkout Session', {
-				sessionId: session.id,
-				error: String(error)
-			});
+			log.warn('Could not expire Checkout Session', { sessionId: session.id }, error);
 		});
 	}
 
@@ -61,8 +62,8 @@ async function sweepOrder(stripe: Stripe, order: Order, now: Date) {
 	const latest = reconciled ?? (await getOrder(order.orderId));
 
 	// Still holding stock (e.g. a delayed payment still pending): check again later.
-	if (latest && (latest.status === 'RESERVED' || latest.status === 'PROCESSING')) {
-		const delay = latest.status === 'PROCESSING' ? PROCESSING_RECHECK_MS : RESERVED_RECHECK_MS;
+	if (latest && holdsStock(latest.status)) {
+		const delay = latest.status === 'PROCESSING' ? PROCESSING_RECHECK_MS : SWEEP_INTERVAL_MS;
 		await deferRelease(latest, new Date(now.getTime() + delay).toISOString());
 	}
 }

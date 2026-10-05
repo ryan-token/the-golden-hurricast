@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { ApiError, createCheckout, getCatalog } from '#lib/server/hurricast-api.js';
+import { ApiError, createCheckout, describeError, getCatalog } from '#lib/server/hurricast-api.js';
 import type { Product } from '#lib/server/hurricast-api.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -16,10 +16,7 @@ export const load: PageServerLoad = async ({ setHeaders, platform }) => {
 		products = await getCatalog();
 	} catch (error) {
 		// Show the page (with an "unavailable" note) rather than an error, and don't cache it.
-		console.error(
-			'Failed to load the merch catalog:',
-			error instanceof Error ? error.message : error
-		);
+		console.error('Failed to load the merch catalog:', describeError(error));
 		setHeaders({ 'cache-control': 'no-store' });
 		return { products: [], useImageCdn };
 	}
@@ -60,7 +57,7 @@ export const actions: Actions = {
 			if (error instanceof ApiError && error.status < 500) {
 				return fail(error.status, { productId, message: error.message });
 			}
-			console.error('Checkout failed:', error instanceof Error ? error.message : error);
+			console.error('Checkout failed:', describeError(error));
 			return fail(502, {
 				productId,
 				message: "We couldn't start checkout. Please try again in a moment."

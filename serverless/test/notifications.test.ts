@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { questionMessage } from '../src/merch/notifications.ts';
+import { questionMessage } from '../src/notifications.ts';
 
 describe('Slack messages', () => {
 	it('escapes listener input so it cannot ping the channel or inject links', () => {

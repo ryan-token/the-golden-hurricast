@@ -10,9 +10,9 @@
  * DynamoDB conditions can't do arithmetic, so `Available` is stored explicitly and every
  * write keeps the counters consistent inside a transaction.
  */
-import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import type { TransactWriteCommandInput } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, paginateQuery, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, INVENTORY_PK, keys, tableName } from './table.ts';
+import type { TransactItem } from './table.ts';
 
 export interface Inventory {
 	productId: string;
@@ -23,8 +23,6 @@ export interface Inventory {
 	sold: number;
 	updatedAt: string;
 }
-
-type TransactItem = NonNullable<TransactWriteCommandInput['TransactItems']>[number];
 
 function fromItem(item: Record<string, unknown>): Inventory {
 	return {
@@ -40,20 +38,17 @@ function fromItem(item: Record<string, unknown>): Inventory {
 /** Stock for every tracked product, keyed by Stripe product id. */
 export async function listInventory(): Promise<Map<string, Inventory>> {
 	const items: Inventory[] = [];
-	let ExclusiveStartKey: Record<string, unknown> | undefined;
-	do {
-		const page = await ddb.send(
-			new QueryCommand({
-				TableName: tableName(),
-				KeyConditionExpression: 'PK = :pk',
-				ExpressionAttributeValues: { ':pk': INVENTORY_PK },
-				ConsistentRead: true,
-				ExclusiveStartKey
-			})
-		);
+	for await (const page of paginateQuery(
+		{ client: ddb },
+		{
+			TableName: tableName(),
+			KeyConditionExpression: 'PK = :pk',
+			ExpressionAttributeValues: { ':pk': INVENTORY_PK },
+			ConsistentRead: true
+		}
+	)) {
 		items.push(...(page.Items ?? []).map(fromItem));
-		ExclusiveStartKey = page.LastEvaluatedKey;
-	} while (ExclusiveStartKey);
+	}
 
 	return new Map(items.map((item) => [item.productId, item]));
 }

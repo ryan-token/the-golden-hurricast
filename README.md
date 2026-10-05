@@ -14,8 +14,8 @@ _Development by Ryan Token, blog and podcast contributions from Pat Fox, Matt Re
 ## 🚀 Stack
 
 - [SvelteKit 3](https://svelte.dev/docs/kit) and [Svelte 5](https://svelte.dev/docs/svelte), styled with [Tailwind CSS 4](https://tailwindcss.com/)
-- **Hosted on Netlify** with [`@sveltejs/adapter-netlify`](https://svelte.dev/docs/kit/adapter-netlify). Pages are prerendered to static HTML; the merch pages and the question form run as Netlify Functions.
-- Merch, inventory, Stripe Checkout and listener questions are served by the AWS backend in [`serverless/`](serverless/README.md)
+- **Hosted on Netlify** with [`@sveltejs/adapter-netlify`](https://svelte.dev/docs/kit/adapter-netlify). Pages are prerendered to static HTML. The merch pages (`/merch/`, `/merch/success/`), the question endpoint (`/api/questions/`) and `/question-received/` are server-rendered by one Netlify Function.
+- Merch, inventory, Stripe Checkout and listener questions are served by the AWS backend in [`serverless/`](serverless/README.md). The site calls it only from the server (`src/lib/server/hurricast-api.ts`), never from browsers.
 - **Commits to `main` trigger a production build on Netlify.** Other branches get deploy previews.
 - goldenhurricast.com redirects to thegoldenhurricast.com
 
@@ -35,17 +35,36 @@ npm run dev            # http://localhost:5173
 npm run check      # svelte-check (TypeScript)
 npm run lint       # Prettier + ESLint
 npm run test:unit  # Vitest
-npm run test:e2e   # Playwright, against a production build
+npm run test:e2e   # Playwright in Chromium, Firefox and WebKit (Safari), against a production build
 npm run build && npm run preview
 ```
 
+The e2e suite never calls the real API, so any values work for the environment variables there (the key must still be at least 32 characters).
+
+### How it fits together
+
+| Where                                                     | What                                                                                                                                                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/routes/`                                             | Pages, with the same URLs (and trailing slashes) as the old Gatsby site. Blog posts live at the site root (`/a-spartan-recap/`).                                                            |
+| `src/content/posts/`                                      | Blog posts in Markdown, rendered at build time (`src/lib/server/markdown.ts`).                                                                                                             |
+| `src/lib/components/`                                     | Shared components. `ApplePodcastsEmbed` shows a lightweight stand-in and loads Apple's player once the page is idle; `AskQuestion` is a native `<dialog>` that works without JavaScript. |
+| `src/lib/assets/`                                         | Images processed at build time by [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images) (AVIF/WebP, responsive sizes).                                                            |
+| `static/`                                                 | Files served as-is: blog images and videos, icons, share images.                                                                                                                         |
+| `src/routes/layout.css`                                   | Tailwind 4 theme: colours, heading sizes, content width, base styles.                                                                                                                      |
+| `vite.config.ts`                                          | SvelteKit config (Kit 3 has no `svelte.config.js`), including the hash-based Content Security Policy.                                                                                      |
+| `src/hooks.server.ts`                                     | Security headers for server-rendered pages, and redirects for old URLs and domain aliases.                                                                                                 |
+| `_headers`, `_redirects`, `netlify.toml`                  | Netlify: security headers for static files, domain-alias redirects for static files, build settings and the Image CDN allowlist (Stripe product photos).                                  |
+
+Redirects for old URLs live in `hooks.server.ts` rather than `_redirects`: Netlify sends any path without a static file to the SvelteKit function before it applies `_redirects`.
+
 ### Environment variables
 
-Declared and validated in [`src/env.ts`](src/env.ts). Set them in Netlify (Site configuration → Environment variables) per deploy context:
+Declared and validated in [`src/env.ts`](src/env.ts); they're read at runtime and never reach the browser. Set them in Netlify (Site configuration → Environment variables, scoped to Functions) per deploy context:
 
-| Variable            | Production                   | Deploy previews / local |
-| ------------------- | ---------------------------- | ----------------------- |
-| `HURRICAST_API_URL` | the `prod` stage's API URL   | the `dev` stage's API URL |
+| Variable            | Production                                       | Deploy previews / local                         |
+| ------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `HURRICAST_API_URL` | the `prod` stage's API URL                       | the `dev` stage's API URL                       |
+| `HURRICAST_API_KEY` | SSM `/hurricast/prod/site-api-key` (secret, 32+ characters) | SSM `/hurricast/dev/site-api-key` (secret) |
 
 ## Publishing Blog Posts
 
@@ -71,6 +90,7 @@ tags: ['basketball', 'coaching']
 
 - Blog post content goes below the metadata, in Markdown
 - Images for the post go in the `static/blog_images` folder, and are referenced as `![image alt text](/blog_images/folder-name/your-image-name.jpeg)`. Avoid spaces in file names.
+- Keep images light, since they're served as-is: no wider than 1300px (twice the blog column), then compress them, e.g. with Homebrew's `pngquant --quality=80-100 --skip-if-larger --ext .png image.png` plus `oxipng -o max --strip safe image.png` for PNGs, and `jpegtran -optimize -progressive -copy icc -outfile out.jpg in.jpg` for JPEGs (photos can go to quality 85 with `cjpeg`). Prefer JPEG for photos.
 - Run `npm run dev` to preview it locally. The build checks that the metadata is complete and that every image exists.
 - Once you're ready to publish, run `git add .`, `git commit -m "Add a new blog post"`, and `git push origin blog`
 - In a minute or so, the preview of the blog post should be viewable at `blog--thegoldenhurricast.netlify.app`

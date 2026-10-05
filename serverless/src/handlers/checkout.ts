@@ -4,7 +4,8 @@ import { createCheckout } from '../merch/checkout.ts';
 import { getStripe } from '../merch/stripe.ts';
 import { requireEnv } from '../lib/env.ts';
 import { consumeRateLimit } from '../data/rate-limits.ts';
-import { assertWithinRateLimit, HttpError, json, parseJsonBody, siteHandler } from '../lib/http.ts';
+import { HttpError } from '../lib/errors.ts';
+import { assertWithinRateLimit, json, parseJsonBody, siteHandler } from '../lib/http.ts';
 
 const CheckoutBody = v.object({
 	productId: v.pipe(v.string(), v.regex(/^prod_[A-Za-z0-9]{1,64}$/)),

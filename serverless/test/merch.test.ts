@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInventory, getInventory } from '../src/data/inventory.ts';
 import { getOrder, listOrders } from '../src/data/orders.ts';
 import { ddb } from '../src/data/table.ts';
-import { HttpError } from '../src/lib/http.ts';
+import { HttpError } from '../src/lib/errors.ts';
 import { clearCatalogCache, getCatalog, MAX_PER_ORDER } from '../src/merch/catalog.ts';
 import { createCheckout } from '../src/merch/checkout.ts';
 import { reconcileCheckoutSession } from '../src/merch/reconcile.ts';

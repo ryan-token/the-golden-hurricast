@@ -15,7 +15,6 @@ describe('posts', () => {
 
 		const dates = posts.map(({ published }) => published);
 		expect(dates).toEqual(dates.toSorted().reverse());
-		for (const post of posts) expect(post.path).toBe(`/${post.slug}/`);
 
 		// Slugs with an apostrophe must still resolve.
 		expect((await getPost("we're-on-patreon"))?.title).toBe("We're on Patreon!");

@@ -8,6 +8,7 @@ node_modules
 
 # Serverless Framework
 .serverless/
+.serverless-package/
 .esbuild/
 
 # OS

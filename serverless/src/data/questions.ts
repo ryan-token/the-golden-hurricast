@@ -11,7 +11,7 @@ export interface Question {
 	submittedAt: string;
 }
 
-function fromItem(item: Record<string, unknown>): Question {
+export function questionFromItem(item: Record<string, unknown>): Question {
 	return {
 		questionId: item.QuestionId as string,
 		question: item.Question as string,
@@ -63,7 +63,5 @@ export async function listQuestions(limit = 25): Promise<Question[]> {
 			Limit: limit
 		})
 	);
-	return (page.Items ?? []).map(fromItem);
+	return (page.Items ?? []).map(questionFromItem);
 }
-
-export { fromItem as questionFromItem };

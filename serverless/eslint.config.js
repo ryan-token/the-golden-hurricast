@@ -4,7 +4,7 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 
 export default defineConfig(
-	{ ignores: ['.serverless/**', '.esbuild/**', 'node_modules/**'] },
+	{ ignores: ['.serverless/**', '.serverless-package/**', 'node_modules/**'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	{

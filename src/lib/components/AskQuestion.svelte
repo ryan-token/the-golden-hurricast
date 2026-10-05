@@ -181,14 +181,7 @@
 		</div>
 
 		<div class="flex justify-end gap-2 border-t border-line px-4 py-3">
-			<button
-				type="button"
-				commandfor={DIALOG_ID}
-				command="close"
-				class="rounded-md border border-muted bg-muted px-3 py-1.5 text-white hover:border-ink hover:bg-ink"
-			>
-				Close
-			</button>
+			<Button variant="secondary" commandfor={DIALOG_ID} command="close">Close</Button>
 			{#if !submitted}
 				<Button type="submit" disabled={pending}>{pending ? 'Submitting…' : 'Submit'}</Button>
 			{/if}

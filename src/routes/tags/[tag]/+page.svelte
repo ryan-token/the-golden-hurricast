@@ -19,8 +19,8 @@
 	])}
 />
 
-<div class="mx-auto max-w-[68rem] px-4 pt-12 pb-12 sm:px-8 sm:pt-16">
-	<h1 class="mb-6 text-[min(calc(1.325rem_+_0.9vw),2rem)]">Posts about {data.tag}</h1>
+<div class="mx-auto max-w-content px-4 pt-12 pb-12 sm:px-8 sm:pt-16">
+	<h1 class="mb-6 text-h2">Posts about {data.tag}</h1>
 	<p>These are all of the posts we've ever written that relate to {data.tag}:</p>
 	<hr />
 	<ul class="list-disc pl-8 leading-relaxed">

@@ -7,6 +7,7 @@ export const SITE = {
 		'The leading independent podcast and blog covering Golden Hurricane athletics at The University of Tulsa',
 	email: 'thegoldenhurricast@gmail.com',
 	xHandle: '@GoldenHurricast',
+	blueskyHandle: '@thegoldenhurricast.com',
 	/** Default 1200×630 share image, relative to the site root. */
 	ogImage: '/og-image.png'
 } as const;

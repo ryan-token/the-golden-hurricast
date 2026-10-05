@@ -9,12 +9,10 @@
  */
 import { setTimeout as sleep } from 'node:timers/promises';
 import type Stripe from 'stripe';
-import { getOrder, transitionOrder } from '../data/orders.ts';
+import { getOrder, holdsStock, transitionOrder } from '../data/orders.ts';
 import type { Order, Transition } from '../data/orders.ts';
 import { log } from '../lib/log.ts';
-
-/** How long a delayed payment (e.g. bank debit) may stay pending before we re-check it. */
-const PROCESSING_RECHECK_MS = 24 * 60 * 60 * 1000;
+import { PROCESSING_RECHECK_MS } from './schedule.ts';
 
 export async function retrieveCheckoutSession(stripe: Stripe, sessionId: string) {
 	return stripe.checkout.sessions.retrieve(sessionId, {
@@ -41,11 +39,11 @@ export async function reconcileCheckoutSession(
 
 	let order = await getOrder(orderId);
 	if (!order) {
-		log.error('Checkout Session refers to an unknown order', undefined, { sessionId, orderId });
+		log.error('Checkout Session refers to an unknown order', { sessionId, orderId });
 		return undefined;
 	}
 	if (order.checkoutSessionId && order.checkoutSessionId !== session.id) {
-		log.error('Checkout Session does not match the order', undefined, { sessionId, orderId });
+		log.error('Checkout Session does not match the order', { sessionId, orderId });
 		return order;
 	}
 
@@ -85,9 +83,10 @@ export function decideTransition(
 		// Completed but unpaid: a delayed payment method. The PaymentIntent tells us how it went.
 		const paymentIntent = session.payment_intent;
 		const piStatus = typeof paymentIntent === 'object' ? paymentIntent?.status : undefined;
-		const holdsStock = order.status === 'RESERVED' || order.status === 'PROCESSING';
-
-		if ((piStatus === 'requires_payment_method' || piStatus === 'canceled') && holdsStock) {
+		if (
+			(piStatus === 'requires_payment_method' || piStatus === 'canceled') &&
+			holdsStock(order.status)
+		) {
 			return { to: 'FAILED' };
 		}
 		if (order.status === 'RESERVED') {
@@ -117,7 +116,7 @@ function paymentDetails(order: Order, session: Stripe.Checkout.Session, now: Dat
 			lines.some((line) => line.price?.id === item.priceId && line.quantity === item.quantity)
 		);
 	if (!matches) {
-		log.error('Checkout line items do not match the order', undefined, {
+		log.error('Checkout line items do not match the order', {
 			orderId: order.orderId,
 			sessionId: session.id
 		});

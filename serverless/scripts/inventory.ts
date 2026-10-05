@@ -28,7 +28,12 @@ switch (command) {
 	}
 	case 'track': {
 		const [productId, name, available] = args;
-		if (!productId?.startsWith('prod_') || !name || !Number.isInteger(Number(available))) {
+		if (
+			!productId?.startsWith('prod_') ||
+			!name ||
+			!Number.isInteger(Number(available)) ||
+			Number(available) < 0
+		) {
 			throw new Error('Usage: track <productId> <name> <available>');
 		}
 		await createInventory({ productId, name, available: Number(available) });

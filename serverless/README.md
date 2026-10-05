@@ -43,7 +43,7 @@ This follows Stripe's [fulfillment](https://docs.stripe.com/checkout/fulfillment
 - **Fulfillment is idempotent.** The webhook, the success page and the sweeper all call the same `reconcileCheckoutSession()`, which always re-reads the session from Stripe. Every order change is a DynamoDB transaction conditioned on the order's current status, so retries and concurrent calls can't double-count.
 - **The sweeper is the safety net**: it expires checkouts Stripe left open, catches missed webhooks, and releases reservations whose checkout was never created.
 - **A payment that lands after its reservation was released** is still honored and flagged `oversold` (the Slack message says so).
-- Paid orders and new questions are posted to Slack by a DynamoDB-stream consumer.
+- Paid orders and new questions are posted to Slack by a DynamoDB-stream consumer (`src/handlers/notify.ts`). It handles records in order and stops at the first failure, so Lambda's retries (up to 5, for records under a day old) never repost messages that already went out.
 
 Customer details (name, address, email) stay in Stripe. The table stores only what's needed to manage stock.
 
@@ -71,15 +71,31 @@ Order and question ids are [KSUIDs](https://github.com/segmentio/ksuid), so they
 
 Inventory counters: `Available + Reserved` = units on hand; `Sold` = lifetime sales through this system. Conditions can't do arithmetic, so `Available` is stored explicitly.
 
+## Code layout
+
+| Path                   | What                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `src/handlers/`        | Lambda entry points, one per function in `serverless.yml`. Thin: parse, authenticate, call the domain code. |
+| `src/merch/`           | Catalog, checkout, reconciliation, the sweeper, the Stripe client, and their shared timing (`schedule.ts`). |
+| `src/data/`            | All DynamoDB access: the table and key design (`table.ts`), orders, inventory, questions, rate limits.      |
+| `src/notifications.ts` | Slack message text for paid orders and questions.                                                           |
+| `src/lib/`             | HTTP helpers and errors, site authentication, logging, SSM secrets, Slack, text cleaning, KSUIDs.           |
+| `scripts/`             | Admin and debug scripts (below), and `verify-bundle.ts`.                                                    |
+| `test/`                | Vitest suites, a fake Stripe, and DynamoDB Local setup.                                                     |
+
+Logs are structured JSON: `log.info(msg, fields)`, `log.warn(msg, fields, error?)` and `log.error(msg, fields, error?)` (`src/lib/log.ts`).
+
 ## Development
 
 ```sh
 npm install
 npm run check      # TypeScript
 npm run lint
-npm test           # Vitest against DynamoDB Local (needs Docker) and a fake Stripe
-npm run verify:bundle  # package, then load every built handler like Lambda does
+npm test           # Vitest against DynamoDB Local 3.3.1 (needs Docker) and a fake Stripe
+npm run verify:bundle  # package the dev stage, then load every built handler like Lambda does
 ```
+
+**Dependencies:** `stripe` and `valibot` are bundled into each function. The AWS SDK (`@aws-sdk/*`) is a devDependency on purpose: Serverless v4 leaves it out of the bundle and the functions use the copy built into Lambda's Node.js 24 runtime; the pinned versions are for type-checking and tests.
 
 AWS credentials come from `AWS_PROFILE=tgh-ryan` and the Serverless Framework key from `SERVERLESS_ACCESS_KEY`, both set by the repo's `.envrc` (direnv).
 
@@ -103,15 +119,16 @@ npm run deploy:dev
 npm run deploy:prod
 ```
 
-Both type-check, test, and verify the bundle first.
+Both type-check, lint and test, then package the stage into `.serverless-package/<stage>/` (one zip per function), load every handler from that build (`scripts/verify-bundle.ts`), and deploy exactly that package.
 
 Secrets live in SSM Parameter Store (SecureString) and are read at runtime, never baked into the Lambda configuration:
 
-| Parameter                                  | Value                                                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------- |
-| `/hurricast/<stage>/stripe-secret-key`     | Stripe restricted key (`rk_…`): Products/Prices read, Checkout Sessions write |
-| `/hurricast/<stage>/stripe-webhook-secret` | Signing secret of the stage's webhook endpoint (`whsec_…`)                    |
-| `/hurricast/<stage>/slack-webhook-url`     | Slack incoming webhook                                                        |
+| Parameter                                  | Value                                                                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `/hurricast/<stage>/stripe-secret-key`     | Stripe restricted key (`rk_…`): Products/Prices read, Checkout Sessions write, PaymentIntents read                    |
+| `/hurricast/<stage>/stripe-webhook-secret` | Signing secret of the stage's webhook endpoint (`whsec_…`)                                                            |
+| `/hurricast/<stage>/slack-webhook-url`     | Slack incoming webhook                                                                                                |
+| `/hurricast/<stage>/site-api-key`          | Shared key the website sends in `x-api-key` (32+ random characters); the same value is the site's `HURRICAST_API_KEY` |
 
 The Stripe webhook endpoint for each stage points at `<api>/stripe/webhook`, uses API version `2026-09-30.endive` (matching `STRIPE_API_VERSION` in `src/merch/stripe.ts`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`.
 

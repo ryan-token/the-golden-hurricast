@@ -54,7 +54,7 @@
 	</p>
 </Hero>
 
-<div class="mx-auto max-w-[68rem] space-y-12 px-4 pt-4 pb-12 sm:px-8">
+<div class="mx-auto max-w-content space-y-12 px-4 pt-4 pb-12 sm:px-8">
 	<section aria-labelledby="our-podcast">
 		<SectionHeading id="our-podcast">Our Podcast</SectionHeading>
 		<div class="space-y-4">
@@ -123,9 +123,7 @@
 			<div>
 				<dt class="inline">Bluesky:</dt>
 				<dd class="inline">
-					<a href={LINKS.bluesky} target="_blank" rel="noopener noreferrer"
-						>@thegoldenhurricast.com</a
-					>
+					<a href={LINKS.bluesky} target="_blank" rel="noopener noreferrer">{SITE.blueskyHandle}</a>
 				</dd>
 			</div>
 			<div>

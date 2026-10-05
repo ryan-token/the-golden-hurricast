@@ -58,6 +58,12 @@ export class ApiError extends Error {
 	}
 }
 
+/** A short, loggable description of a failed API call. Never includes request data. */
+export function describeError(error: unknown): unknown {
+	if (error instanceof ApiError) return `${error.status} ${error.code}`;
+	return error instanceof Error ? error.message : error;
+}
+
 /**
  * @param clientIp The visitor's IP, for the API's per-visitor rate limits. The API only
  *   trusts it because the request is authenticated with the site key.

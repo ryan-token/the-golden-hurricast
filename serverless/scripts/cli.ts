@@ -1,6 +1,7 @@
 /** Shared helpers for the admin scripts. Run them with Node (types are stripped natively). */
 import { parseArgs } from 'node:util';
 import type { ParseArgsOptionsConfig } from 'node:util';
+import { formatMoney } from '../src/lib/money.ts';
 
 export type Stage = 'dev' | 'prod';
 
@@ -21,7 +22,5 @@ export function parseCli<T extends ParseArgsOptionsConfig>(options: T) {
 }
 
 export function money(cents: number | undefined, currency = 'usd') {
-	return cents === undefined
-		? '—'
-		: new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+	return cents === undefined ? '—' : formatMoney(cents, currency);
 }

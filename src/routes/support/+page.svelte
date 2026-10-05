@@ -22,7 +22,7 @@
 	{/snippet}
 </Hero>
 
-<section aria-labelledby="how-to-support" class="mx-auto max-w-[68rem] px-4 pt-4 pb-12 sm:px-8">
+<section aria-labelledby="how-to-support" class="mx-auto max-w-content px-4 pt-4 pb-12 sm:px-8">
 	<SectionHeading id="how-to-support">How to Support Us</SectionHeading>
 	<ol class="space-y-10">
 		<li>

@@ -8,7 +8,7 @@
  */
 import { redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { ApiError, submitQuestion } from '#lib/server/hurricast-api.js';
+import { ApiError, describeError, submitQuestion } from '#lib/server/hurricast-api.js';
 import type { RequestHandler } from './$types';
 
 export const prerender = false;
@@ -63,14 +63,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 				);
 			}
 			// Log what went wrong, never the question itself.
-			console.error(
-				'Question submission failed:',
-				err instanceof ApiError
-					? `${err.status} ${err.code}`
-					: err instanceof Error
-						? err.message
-						: err
-			);
+			console.error('Question submission failed:', describeError(err));
 			if (wantsJson) return Response.json({ ok: false, message: FAILED_MESSAGE }, { status: 502 });
 			redirect(303, '/question-received/?error=failed');
 		}

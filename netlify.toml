@@ -1,6 +1,8 @@
-# The publish directory is set by @sveltejs/adapter-netlify (vite.config.ts), not here.
 [build]
   command = "npm run build"
+  # Where @sveltejs/adapter-netlify writes the site (`publish` in vite.config.ts). Set here
+  # so it overrides the old Gatsby `public` directory in Netlify's UI settings.
+  publish = "build"
   environment = { NODE_VERSION = "24" }
 
 # Product photos are hosted by Stripe; let the Netlify Image CDN resize them (see src/lib/images.ts).

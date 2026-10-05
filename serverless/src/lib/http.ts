@@ -9,8 +9,6 @@ import { log } from './log.ts';
 import { authenticateSite } from './site-auth.ts';
 import type { SiteRequest } from './site-auth.ts';
 
-export { HttpError };
-
 export type Response = APIGatewayProxyStructuredResultV2;
 export type Handler = (event: APIGatewayProxyEventV2, context: Context) => Promise<Response>;
 export type SiteHandler = (
@@ -66,10 +64,10 @@ export function httpHandler(handler: Handler): Handler {
 			return await handler(event, context);
 		} catch (error) {
 			if (error instanceof HttpError) {
-				if (error.status >= 500) log.error('Request failed', error, { route: event.routeKey });
+				if (error.status >= 500) log.error('Request failed', { route: event.routeKey }, error);
 				return json(error.status, { error: { code: error.code, message: error.message } });
 			}
-			log.error('Unhandled error', error, { route: event.routeKey });
+			log.error('Unhandled error', { route: event.routeKey }, error);
 			return json(500, {
 				error: { code: 'internal_error', message: 'Something went wrong. Please try again.' }
 			});

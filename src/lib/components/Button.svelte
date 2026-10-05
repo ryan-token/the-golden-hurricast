@@ -6,7 +6,7 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 
-	type Variant = 'primary' | 'outline-primary' | 'outline-dark';
+	type Variant = 'primary' | 'secondary' | 'outline-primary' | 'outline-dark';
 
 	type Props = { variant?: Variant; children: Snippet } & (
 		({ href: string } & HTMLAnchorAttributes) | ({ href?: undefined } & HTMLButtonAttributes)
@@ -20,6 +20,8 @@
 		{
 			'border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover hover:text-white':
 				variant === 'primary',
+			'border-muted bg-muted text-white hover:border-ink hover:bg-ink hover:text-white':
+				variant === 'secondary',
 			'border-primary text-primary hover:bg-primary hover:text-white':
 				variant === 'outline-primary',
 			'border-ink text-ink hover:bg-ink hover:text-white': variant === 'outline-dark'

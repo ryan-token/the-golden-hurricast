@@ -11,7 +11,7 @@
  * check the plan against a physical count (and Stripe's payments) before applying it.
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, paginateScan } from '@aws-sdk/lib-dynamodb';
 import { createInventory, listInventory } from '../src/data/inventory.ts';
 import { parseCli } from './cli.ts';
 
@@ -70,17 +70,14 @@ const overrides = new Map(
 // Sum legacy orders per product.
 const legacyDb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const sold = new Map<string, number>();
-let ExclusiveStartKey: Record<string, unknown> | undefined;
-do {
-	const page = await legacyDb.send(new ScanCommand({ TableName: legacy.table, ExclusiveStartKey }));
+for await (const page of paginateScan({ client: legacyDb }, { TableName: legacy.table })) {
 	for (const item of page.Items ?? []) {
 		const quantity = Number(item.quantity);
 		if (Number.isInteger(quantity) && quantity > 0) {
 			sold.set(item.productId, (sold.get(item.productId) ?? 0) + quantity);
 		}
 	}
-	ExclusiveStartKey = page.LastEvaluatedKey;
-} while (ExclusiveStartKey);
+}
 
 const existing = await listInventory();
 const plan = legacy.products.map(([productId, name, total]) => {

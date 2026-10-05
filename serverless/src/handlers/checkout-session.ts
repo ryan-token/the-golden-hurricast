@@ -1,7 +1,8 @@
 import { reconcileCheckoutSession } from '../merch/reconcile.ts';
-import { getStripe } from '../merch/stripe.ts';
+import { getStripe, isMissing } from '../merch/stripe.ts';
 import { consumeRateLimit } from '../data/rate-limits.ts';
-import { assertWithinRateLimit, HttpError, json, siteHandler } from '../lib/http.ts';
+import { HttpError } from '../lib/errors.ts';
+import { assertWithinRateLimit, json, siteHandler } from '../lib/http.ts';
 
 const SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{1,200}$/;
 
@@ -29,7 +30,7 @@ export const handler = siteHandler(async (event, { clientId }) => {
 
 	const order = await reconcileCheckoutSession(await getStripe(), sessionId).catch(
 		(error: unknown) => {
-			if ((error as { type?: string }).type === 'StripeInvalidRequestError') return undefined;
+			if (isMissing(error)) return undefined;
 			throw error;
 		}
 	);

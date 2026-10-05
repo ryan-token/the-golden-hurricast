@@ -1,14 +1,13 @@
 <script lang="ts">
 	import Button from '#lib/components/Button.svelte';
 	import Seo from '#lib/components/Seo.svelte';
+	import { formatMoney } from '#lib/format.js';
 	import { LINKS, SITE } from '#lib/site.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const order = $derived(data.order);
-	const money = (cents: number, currency: string) =>
-		new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
 
 	const heading = $derived.by(() => {
 		switch (order?.status) {
@@ -27,8 +26,7 @@
 <Seo title="Order confirmation" noindex />
 
 <div class="mx-auto max-w-3xl px-4 py-12">
-	<h1 class="mb-2 text-[min(calc(1.275rem_+_0.3vw),1.5rem)]">{heading}</h1>
-	<hr class="mt-0 mb-6" />
+	<h1 class="mb-6 border-b border-line pb-2 text-h4">{heading}</h1>
 
 	<div class="space-y-5">
 		{#if order?.status === 'paid' || order?.status === 'processing'}
@@ -45,14 +43,16 @@
 					{#each order.items as item (item.name)}
 						<tr class="border-b border-line">
 							<th scope="row" class="py-2 pr-4 font-normal">{item.quantity} × {item.name}</th>
-							<td class="py-2 text-right">{money(item.amountTotal, order.currency)}</td>
+							<td class="py-2 text-right">{formatMoney(item.amountTotal, order.currency)}</td>
 						</tr>
 					{/each}
 				</tbody>
 				<tfoot>
 					<tr>
 						<th scope="row" class="py-2 pr-4">Total paid</th>
-						<td class="py-2 text-right font-bold">{money(order.amountTotal, order.currency)}</td>
+						<td class="py-2 text-right font-bold"
+							>{formatMoney(order.amountTotal, order.currency)}</td
+						>
 					</tr>
 				</tfoot>
 			</table>

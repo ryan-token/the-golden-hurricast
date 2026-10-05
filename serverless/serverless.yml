@@ -11,6 +11,8 @@ provider:
   architecture: arm64
   region: us-east-2
   stage: ${opt:stage, 'dev'}
+  # No aliases or provisioned concurrency, so don't keep a version per deploy.
+  versionFunctions: false
   memorySize: 512
   timeout: 15
   logRetentionInDays: 90
@@ -29,8 +31,6 @@ provider:
     STRIPE_WEBHOOK_SECRET_PARAM: /hurricast/${sls:stage}/stripe-webhook-secret
     SLACK_WEBHOOK_URL_PARAM: /hurricast/${sls:stage}/slack-webhook-url
     SITE_API_KEY_PARAM: /hurricast/${sls:stage}/site-api-key
-    ALLOWED_ORIGINS: ${param:allowedOrigins}
-    ALLOWED_ORIGIN_PATTERN: ${param:allowedOriginPattern}
   httpApi:
     # Called server-to-server by the website, never from browsers: no CORS.
     shouldStartNameWithService: true
@@ -67,10 +67,12 @@ custom:
       Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
       Resource: !GetAtt Table.Arn
 
+# Each function gets its own bundle, so the small ones don't ship Stripe.
+package:
+  individually: true
+
 build:
   esbuild:
-    bundle: true
-    minify: false
     sourcemap:
       type: linked
       setNodeOptions: true
@@ -94,6 +96,9 @@ functions:
 
   checkout:
     handler: src/handlers/checkout.handler
+    environment:
+      ALLOWED_ORIGINS: ${param:allowedOrigins}
+      ALLOWED_ORIGIN_PATTERN: ${param:allowedOriginPattern}
     # Just under HTTP API's 30-second limit, so a Checkout Session create that exhausts its
     # Stripe retries (src/merch/stripe.ts) still leaves time to release the reservation.
     timeout: 29
@@ -161,6 +166,8 @@ functions:
 
   notify:
     handler: src/handlers/notify.handler
+    # A batch stops at its first failure, but give slow Slack responses (10s each) room.
+    timeout: 60
     iam:
       role:
         statements:

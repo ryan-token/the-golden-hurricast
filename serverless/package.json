@@ -12,15 +12,12 @@
 		"check": "tsc --noEmit",
 		"lint": "eslint .",
 		"test": "vitest --run",
-		"deploy:dev": "npm run check && npm test && npm run verify:bundle && serverless deploy --stage dev",
-		"deploy:prod": "npm run check && npm test && serverless package --stage prod && node scripts/verify-bundle.ts && serverless deploy --stage prod",
+		"deploy:dev": "npm run check && npm run lint && npm test && npm run verify:bundle && serverless deploy --stage dev --package .serverless-package/dev",
+		"deploy:prod": "npm run check && npm run lint && npm test && serverless package --stage prod --package .serverless-package/prod && node scripts/verify-bundle.ts .serverless-package/prod && serverless deploy --stage prod --package .serverless-package/prod",
 		"inventory": "node scripts/inventory.ts",
 		"orders": "node scripts/orders.ts",
 		"seed-inventory": "node scripts/seed-inventory.ts",
-		"verify:bundle": "serverless package --stage dev && node scripts/verify-bundle.ts"
-	},
-	"imports": {
-		"#src/*": "./src/*"
+		"verify:bundle": "serverless package --stage dev --package .serverless-package/dev && node scripts/verify-bundle.ts .serverless-package/dev"
 	},
 	"dependencies": {
 		"stripe": "^23.0.0",

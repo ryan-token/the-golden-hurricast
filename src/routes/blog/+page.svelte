@@ -32,8 +32,8 @@
 	</p>
 </Hero>
 
-<section aria-labelledby="all-posts" class="mx-auto max-w-[68rem] px-4 pb-12 sm:px-8">
-	<h2 id="all-posts" class="mb-2 text-[min(calc(1.275rem_+_0.3vw),1.5rem)]">All Posts</h2>
+<section aria-labelledby="all-posts" class="mx-auto max-w-content px-4 pb-12 sm:px-8">
+	<h2 id="all-posts" class="mb-2 text-h4">All Posts</h2>
 	<p class="font-bold">
 		This blog has been discontinued. We're primarily writing over on our
 		<a href={LINKS.patreon} target="_blank" rel="noopener noreferrer">Patreon</a> now. Check it out!

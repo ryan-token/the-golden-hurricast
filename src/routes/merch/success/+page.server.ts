@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { ApiError, getOrderForCheckoutSession } from '#lib/server/hurricast-api.js';
+import { ApiError, describeError, getOrderForCheckoutSession } from '#lib/server/hurricast-api.js';
 import type { OrderSummary } from '#lib/server/hurricast-api.js';
 import type { PageServerLoad } from './$types';
 
@@ -25,14 +25,7 @@ export const load: PageServerLoad = async ({ url, setHeaders, getClientAddress }
 			notFound = true;
 		} else if (!(error instanceof ApiError && error.status === 429)) {
 			// Outages and misconfiguration (e.g. a wrong API key) — the order itself may be fine.
-			console.error(
-				'Order lookup failed:',
-				error instanceof ApiError
-					? `${error.status} ${error.code}`
-					: error instanceof Error
-						? error.message
-						: error
-			);
+			console.error('Order lookup failed:', describeError(error));
 		}
 	}
 

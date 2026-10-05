@@ -16,8 +16,8 @@
 	])}
 />
 
-<div class="mx-auto max-w-[68rem] px-4 pt-12 pb-12 sm:px-8 sm:pt-16">
-	<h1 class="mb-6 text-[min(calc(1.325rem_+_0.9vw),2rem)]">Tags</h1>
+<div class="mx-auto max-w-content px-4 pt-12 pb-12 sm:px-8 sm:pt-16">
+	<h1 class="mb-6 text-h2">Tags</h1>
 	<p>Click on any of the tags below to see all the posts we've written about that category.</p>
 	<hr />
 	<ul class="list-disc pl-8 leading-relaxed">

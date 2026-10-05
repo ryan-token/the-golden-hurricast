@@ -39,7 +39,7 @@
 		</p>
 	</header>
 
-	<div class="post-body prose prose-lg max-w-none prose-img:mx-auto prose-video:mx-auto">
+	<div class="prose prose-lg max-w-none prose-img:mx-auto prose-video:mx-auto">
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -- rendered at build time from our own markdown -->
 		{@html post.html}
 	</div>

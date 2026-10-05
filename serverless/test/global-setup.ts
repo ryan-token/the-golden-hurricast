@@ -13,7 +13,7 @@ export default async function setup() {
 			'--rm',
 			'-p',
 			'127.0.0.1::8000',
-			'amazon/dynamodb-local:latest',
+			'amazon/dynamodb-local:3.3.1',
 			'-jar',
 			'DynamoDBLocal.jar',
 			'-inMemory'
@@ -34,11 +34,15 @@ export default async function setup() {
 	});
 
 	// Wait until DynamoDB Local accepts connections.
-	for (let attempt = 0; attempt < 50; attempt++) {
+	for (let attempt = 0; ; attempt++) {
 		try {
 			await fetch(`http://127.0.0.1:${port}`);
 			break;
-		} catch {
+		} catch (error) {
+			if (attempt === 50) {
+				execFileSync('docker', ['rm', '-f', container]);
+				throw new Error('DynamoDB Local did not start', { cause: error });
+			}
 			await new Promise((resolve) => setTimeout(resolve, 200));
 		}
 	}

@@ -3,9 +3,9 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 import type { DynamoDBBatchResponse, DynamoDBStreamEvent } from 'aws-lambda';
 import { orderFromItem } from '../data/orders.ts';
 import { questionFromItem } from '../data/questions.ts';
-import { paidOrderMessage, questionMessage } from '../merch/notifications.ts';
 import { log } from '../lib/log.ts';
 import { postToSlack } from '../lib/slack.ts';
+import { paidOrderMessage, questionMessage } from '../notifications.ts';
 
 type Image = Record<string, AttributeValue> | undefined;
 const toItem = (image: Image) => (image ? unmarshall(image) : undefined);
@@ -13,10 +13,11 @@ const toItem = (image: Image) => (image ? unmarshall(image) : undefined);
 /**
  * DynamoDB stream consumer: posts new questions and newly paid orders to Slack.
  * The event source's filter criteria pre-select those records; we re-check here too.
+ *
+ * Records are handled in order and processing stops at the first failure: Lambda retries
+ * from the failed record onward, so carrying on would post the later ones twice.
  */
 export const handler = async (event: DynamoDBStreamEvent): Promise<DynamoDBBatchResponse> => {
-	const batchItemFailures: DynamoDBBatchResponse['batchItemFailures'] = [];
-
 	for (const record of event.Records) {
 		try {
 			const newItem = toItem(record.dynamodb?.NewImage as Image);
@@ -34,12 +35,9 @@ export const handler = async (event: DynamoDBStreamEvent): Promise<DynamoDBBatch
 				await postToSlack(paidOrderMessage(orderFromItem(newItem)));
 			}
 		} catch (error) {
-			log.error('Failed to send notification', error, { eventId: record.eventID });
-			if (record.dynamodb?.SequenceNumber) {
-				batchItemFailures.push({ itemIdentifier: record.dynamodb.SequenceNumber });
-			}
+			log.error('Failed to send notification', { eventId: record.eventID }, error);
+			return { batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber ?? '' }] };
 		}
 	}
-
-	return { batchItemFailures };
+	return { batchItemFailures: [] };
 };

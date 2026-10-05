@@ -20,11 +20,11 @@ import { TransactionCanceledException } from '@aws-sdk/client-dynamodb';
 import { setTimeout as sleep } from 'node:timers/promises';
 import {
 	GetCommand,
+	paginateQuery,
 	QueryCommand,
 	TransactWriteCommand,
 	UpdateCommand
 } from '@aws-sdk/lib-dynamodb';
-import type { TransactWriteCommandInput } from '@aws-sdk/lib-dynamodb';
 import {
 	commitReservedSale,
 	commitUnreservedSale,
@@ -32,11 +32,12 @@ import {
 	reserveStock
 } from './inventory.ts';
 import { ddb, keys, ORDERS_GSI2PK, RESERVATIONS_GSI1PK, tableName } from './table.ts';
+import type { TransactItem } from './table.ts';
 
 export type OrderStatus = 'RESERVED' | 'PROCESSING' | 'PAID' | 'EXPIRED' | 'FAILED' | 'CANCELED';
 
-/** Statuses in which the order's units are held in `Reserved`. */
-const HOLDS_STOCK: readonly OrderStatus[] = ['RESERVED', 'PROCESSING'];
+/** Whether an order in `status` has its units held in `Reserved`. */
+export const holdsStock = (status: OrderStatus) => status === 'RESERVED' || status === 'PROCESSING';
 
 export interface OrderItem {
 	productId: string;
@@ -66,8 +67,6 @@ export interface Order {
 	flags?: string[];
 }
 
-type TransactItem = NonNullable<TransactWriteCommandInput['TransactItems']>[number];
-
 export class InsufficientStockError extends Error {
 	readonly productId: string;
 
@@ -91,7 +90,7 @@ function toItems(items: OrderItem[]) {
 	}));
 }
 
-function fromItem(item: Record<string, unknown>): Order {
+export function orderFromItem(item: Record<string, unknown>): Order {
 	return {
 		orderId: item.OrderId as string,
 		status: item.Status as OrderStatus,
@@ -207,7 +206,7 @@ export async function getOrder(orderId: string): Promise<Order | undefined> {
 	const result = await ddb.send(
 		new GetCommand({ TableName: tableName(), Key: keys.order(orderId), ConsistentRead: true })
 	);
-	return result.Item ? fromItem(result.Item) : undefined;
+	return result.Item ? orderFromItem(result.Item) : undefined;
 }
 
 /** Records the Checkout Session created for a RESERVED order. */
@@ -280,7 +279,7 @@ export async function transitionOrder(
 	transition: Transition
 ): Promise<Order | undefined> {
 	const now = new Date().toISOString();
-	const heldStock = HOLDS_STOCK.includes(order.status);
+	const heldStock = holdsStock(order.status);
 
 	const names: Record<string, string> = { '#status': 'Status' };
 	const values: Record<string, unknown> = {
@@ -393,20 +392,17 @@ export async function transitionOrder(
 /** Orders holding stock whose next check is due, oldest first. */
 export async function listDueReservations(now = new Date()): Promise<Order[]> {
 	const orders: Order[] = [];
-	let ExclusiveStartKey: Record<string, unknown> | undefined;
-	do {
-		const page = await ddb.send(
-			new QueryCommand({
-				TableName: tableName(),
-				IndexName: 'GSI1',
-				KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK < :now',
-				ExpressionAttributeValues: { ':pk': RESERVATIONS_GSI1PK, ':now': now.toISOString() },
-				ExclusiveStartKey
-			})
-		);
-		orders.push(...(page.Items ?? []).map(fromItem));
-		ExclusiveStartKey = page.LastEvaluatedKey;
-	} while (ExclusiveStartKey);
+	for await (const page of paginateQuery(
+		{ client: ddb },
+		{
+			TableName: tableName(),
+			IndexName: 'GSI1',
+			KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK < :now',
+			ExpressionAttributeValues: { ':pk': RESERVATIONS_GSI1PK, ':now': now.toISOString() }
+		}
+	)) {
+		orders.push(...(page.Items ?? []).map(orderFromItem));
+	}
 	return orders;
 }
 
@@ -422,7 +418,5 @@ export async function listOrders(limit = 25): Promise<Order[]> {
 			Limit: limit
 		})
 	);
-	return (page.Items ?? []).map(fromItem);
+	return (page.Items ?? []).map(orderFromItem);
 }
-
-export { fromItem as orderFromItem };

@@ -13,14 +13,14 @@ import {
 	InsufficientStockError,
 	transitionOrder
 } from '../data/orders.ts';
-import { HttpError } from '../lib/http.ts';
+import { HttpError } from '../lib/errors.ts';
 import { log } from '../lib/log.ts';
 import { MAX_PER_ORDER, toStripeProduct } from './catalog.ts';
+import { SWEEP_GRACE_MS } from './schedule.ts';
+import { isMissing } from './stripe.ts';
 
 /** How long a customer has to pay. Stripe's minimum is 30 minutes after session creation. */
 const CHECKOUT_WINDOW_MS = 31 * 60 * 1000;
-/** Grace after expiry before the sweeper steps in, giving Stripe's webhook time to arrive. */
-const SWEEP_GRACE_MS = 10 * 60 * 1000;
 
 export interface CheckoutRequest {
 	productId: string;
@@ -48,14 +48,15 @@ export async function createCheckout(
 		.retrieve(request.productId, { expand: ['default_price'] })
 		.then(toStripeProduct)
 		.catch((error: unknown) => {
-			if ((error as Stripe.errors.StripeError).type === 'StripeInvalidRequestError')
-				return undefined;
+			if (isMissing(error)) return undefined;
 			throw error;
 		});
 	if (!product) throw new HttpError(404, 'product_not_found', 'That product is not available');
 
 	const orderId = ksuid();
 	const expiresAt = new Date(now.getTime() + CHECKOUT_WINDOW_MS);
+	// Until the session is attached, a crash leaves the reservation for the sweeper.
+	const releaseAfter = new Date(expiresAt.getTime() + SWEEP_GRACE_MS).toISOString();
 
 	try {
 		await createReservedOrder({
@@ -70,8 +71,7 @@ export async function createCheckout(
 				}
 			],
 			currency: product.currency,
-			// Until the session exists, a crash here leaves the reservation for the sweeper.
-			releaseAfter: new Date(expiresAt.getTime() + SWEEP_GRACE_MS).toISOString()
+			releaseAfter
 		});
 	} catch (error) {
 		if (error instanceof InsufficientStockError) {
@@ -106,16 +106,12 @@ export async function createCheckout(
 			{ idempotencyKey: `checkout-session-${orderId}` }
 		);
 	} catch (error) {
-		log.error('Failed to create Checkout Session; releasing reservation', error, { orderId });
+		log.error('Failed to create Checkout Session; releasing reservation', { orderId }, error);
 		await releaseAbandonedReservation(orderId);
 		throw new HttpError(502, 'checkout_unavailable', 'Checkout is unavailable. Please try again.');
 	}
 
-	await attachCheckoutSession(
-		orderId,
-		session.id,
-		new Date(expiresAt.getTime() + SWEEP_GRACE_MS).toISOString()
-	);
+	await attachCheckoutSession(orderId, session.id, releaseAfter);
 
 	log.info('Checkout started', {
 		orderId,
@@ -131,7 +127,7 @@ async function releaseAbandonedReservation(orderId: string) {
 	if (order?.status === 'RESERVED') {
 		await transitionOrder(order, { to: 'CANCELED' }).catch((error: unknown) =>
 			// The sweeper will release it later.
-			log.error('Failed to release reservation', error, { orderId })
+			log.error('Failed to release reservation', { orderId }, error)
 		);
 	}
 }

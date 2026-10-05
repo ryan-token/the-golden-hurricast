@@ -12,6 +12,7 @@
  */
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import type { TransactWriteCommandInput } from '@aws-sdk/lib-dynamodb';
 import { requireEnv } from '../lib/env.ts';
 
 export const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -21,7 +22,7 @@ export const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 export const tableName = () => requireEnv('TABLE_NAME');
 
 export const keys = {
-	inventory: (productId: string) => ({ PK: 'INVENTORY', SK: `PRODUCT#${productId}` }),
+	inventory: (productId: string) => ({ PK: INVENTORY_PK, SK: `PRODUCT#${productId}` }),
 	order: (orderId: string) => ({ PK: `ORDER#${orderId}`, SK: `ORDER#${orderId}` }),
 	question: (questionId: string) => ({ PK: `QUESTION#${questionId}`, SK: `QUESTION#${questionId}` })
 };
@@ -31,5 +32,5 @@ export const RESERVATIONS_GSI1PK = 'RESERVATION';
 export const ORDERS_GSI2PK = 'ORDERS';
 export const QUESTIONS_GSI2PK = 'QUESTIONS';
 
-/** Entity type written to every item's `Type` attribute. */
-export type EntityType = 'Inventory' | 'Order' | 'Question';
+/** One write in a DynamoDB transaction. */
+export type TransactItem = NonNullable<TransactWriteCommandInput['TransactItems']>[number];

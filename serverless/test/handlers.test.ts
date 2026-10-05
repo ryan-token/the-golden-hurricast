@@ -7,7 +7,10 @@ import { createTestTable } from './table.ts';
 const SECRET = 'test_secret';
 const realStripe = new Stripe('sk_test_dummy');
 
-vi.mock('../src/merch/stripe.ts', () => ({ getStripe: async () => realStripe }));
+vi.mock('../src/merch/stripe.ts', async (original) => ({
+	...(await original<typeof import('../src/merch/stripe.ts')>()),
+	getStripe: async () => realStripe
+}));
 vi.mock('../src/lib/secrets.ts', () => ({ getSecret: async () => SECRET }));
 const reconcile = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('../src/merch/reconcile.ts', () => ({ reconcileCheckoutSession: reconcile }));
@@ -141,5 +144,31 @@ describe('POST /questions', async () => {
 		}
 		expect((await ask('2001:db8:0:7:ffff::9')).statusCode).toBe(429);
 		expect((await ask('2001:db8:0:8::1')).statusCode).toBe(201);
+	});
+});
+
+describe('GET /checkout/sessions/{sessionId}', async () => {
+	const { handler } = await import('../src/handlers/checkout-session.ts');
+	const lookup = (sessionId: string) => {
+		const event = fromSite('');
+		event.pathParameters = { sessionId };
+		return handler(event, context);
+	};
+
+	it('is a 404 only when Stripe has no such session; other Stripe errors are 500s', async () => {
+		await createTestTable();
+		reconcile.mockRejectedValueOnce(
+			new Stripe.errors.StripeInvalidRequestError({
+				message: 'No such session',
+				code: 'resource_missing'
+			})
+		);
+		expect((await lookup('cs_test_missing')).statusCode).toBe(404);
+
+		// e.g. a bad `expand` after an API upgrade: must surface, not look like a missing order.
+		reconcile.mockRejectedValueOnce(
+			new Stripe.errors.StripeInvalidRequestError({ message: 'Invalid expand' })
+		);
+		expect((await lookup('cs_test_broken')).statusCode).toBe(500);
 	});
 });

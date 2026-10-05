@@ -3,7 +3,7 @@
  * shapes and semantics (idempotency keys, session lifecycle). Tests drive it the way Stripe
  * and customers would: create a session, then pay for it or let it expire.
  */
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 
 export interface FakeProduct {
 	id: string;
@@ -30,8 +30,6 @@ interface Session {
 	params: Stripe.Checkout.SessionCreateParams;
 }
 
-const stripeError = (type: string, message: string) => Object.assign(new Error(message), { type });
-
 export class FakeStripe {
 	readonly catalog: Map<string, FakeProduct>;
 	readonly sessions = new Map<string, Session>();
@@ -52,7 +50,11 @@ export class FakeStripe {
 	readonly products = {
 		retrieve: async (id: string) => {
 			const product = this.catalog.get(id);
-			if (!product) throw stripeError('StripeInvalidRequestError', `No such product: '${id}'`);
+			if (!product)
+				throw new Stripe.errors.StripeInvalidRequestError({
+					message: `No such product: '${id}'`,
+					code: 'resource_missing'
+				});
 			return toStripeProduct(product);
 		},
 		list: () => {
@@ -79,7 +81,7 @@ export class FakeStripe {
 				if (existing) return structuredClone(this.sessions.get(existing)!);
 				if (this.failNextCreate) {
 					this.failNextCreate = false;
-					throw stripeError('StripeAPIError', 'Stripe is having a bad day');
+					throw new Stripe.errors.StripeAPIError({ message: 'Stripe is having a bad day' });
 				}
 
 				const lineItems = (params.line_items ?? []).map((line) => ({
@@ -116,14 +118,19 @@ export class FakeStripe {
 			retrieve: async (id: string) => {
 				const session = this.sessions.get(id);
 				if (!session)
-					throw stripeError('StripeInvalidRequestError', `No such checkout.session: '${id}'`);
+					throw new Stripe.errors.StripeInvalidRequestError({
+						message: `No such checkout.session: '${id}'`,
+						code: 'resource_missing'
+					});
 				return structuredClone(session);
 			},
 
 			expire: async (id: string) => {
 				const session = this.sessions.get(id);
 				if (session?.status !== 'open') {
-					throw stripeError('StripeInvalidRequestError', 'Only open sessions can be expired');
+					throw new Stripe.errors.StripeInvalidRequestError({
+						message: 'Only open sessions can be expired'
+					});
 				}
 				session.status = 'expired';
 				return structuredClone(session);

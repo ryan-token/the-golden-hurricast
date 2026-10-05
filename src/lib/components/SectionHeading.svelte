@@ -14,5 +14,4 @@
 	let { id, children }: Props = $props();
 </script>
 
-<h2 {id} class="mb-2 text-[min(calc(1.275rem_+_0.3vw),1.5rem)]">{@render children()}</h2>
-<hr class="mt-0 mb-6" />
+<h2 {id} class="mb-6 border-b border-line pb-2 text-h4">{@render children()}</h2>

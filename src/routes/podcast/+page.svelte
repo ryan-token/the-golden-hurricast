@@ -62,7 +62,7 @@
 	</ul>
 </Hero>
 
-<div class="mx-auto max-w-[68rem] space-y-4 px-4 pb-12 sm:px-8">
+<div class="mx-auto max-w-content space-y-4 px-4 pb-12 sm:px-8">
 	<p>
 		Tune in as we discuss Tulsa athletics with TU figures including
 		{@render guest(

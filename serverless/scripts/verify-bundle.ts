@@ -1,15 +1,18 @@
 /**
- * Loads every handler from the packaged build (`serverless package`) the way Lambda will:
- * as ES modules, with only the AWS SDK available outside the bundle. Catches bundling
- * problems — like a CommonJS dependency calling `require()` — before they reach AWS.
+ * Loads every handler from a packaged build (`serverless package --package <dir>`) the way
+ * Lambda will: as ES modules, with only the AWS SDK available outside the bundle. Catches
+ * bundling problems — like a CommonJS dependency calling `require()` — before they reach AWS.
+ * The deploy scripts then deploy that same package.
  *
- *   npm run verify:bundle
+ *   node scripts/verify-bundle.ts .serverless-package/dev   (or: npm run verify:bundle)
  */
 import { readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const dir = resolve('.serverless/build/src/handlers');
+const packageDir = process.argv[2];
+if (!packageDir) throw new Error('Usage: node scripts/verify-bundle.ts <package dir>');
+const dir = resolve(packageDir, 'build/src/handlers');
 // Values the handlers read at import time.
 Object.assign(process.env, { ALLOWED_ORIGINS: 'https://example.com', TABLE_NAME: 'verify' });
 

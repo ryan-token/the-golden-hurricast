@@ -1,12 +1,10 @@
-import type { Order } from '../data/orders.ts';
-import type { Question } from '../data/questions.ts';
-import { escapeSlack } from '../lib/slack.ts';
-
-const money = (amount: number, currency: string) =>
-	new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount / 100);
+import type { Order } from './data/orders.ts';
+import type { Question } from './data/questions.ts';
+import { formatMoney } from './lib/money.ts';
+import { escapeSlack } from './lib/slack.ts';
 
 export function questionMessage(question: Question): string {
-	const name = question.name?.trim() ? escapeSlack(question.name.trim()) : 'Anonymous';
+	const name = question.name ? escapeSlack(question.name) : 'Anonymous';
 	return `*New question from ${name}*:\n\n${escapeSlack(question.question)}`;
 }
 
@@ -26,6 +24,6 @@ export function paidOrderMessage(order: Order): string {
 
 	return (
 		`:shopping_trolley: *New merch order*${order.livemode ? '' : ' (test mode)'}\n` +
-		`${items}\nTotal: ${money(order.amountTotal ?? 0, order.currency)}${link}${warnings}`
+		`${items}\nTotal: ${formatMoney(order.amountTotal ?? 0, order.currency)}${link}${warnings}`
 	);
 }

@@ -11,9 +11,14 @@ function serializeError(error: unknown) {
 		: error;
 }
 
+const entry = (msg: string, fields?: Fields, error?: unknown) => ({
+	msg,
+	...fields,
+	...(error !== undefined && { error: serializeError(error) })
+});
+
 export const log = {
-	info: (msg: string, fields?: Fields) => console.info({ msg, ...fields }),
-	warn: (msg: string, fields?: Fields) => console.warn({ msg, ...fields }),
-	error: (msg: string, error: unknown, fields?: Fields) =>
-		console.error({ msg, ...fields, error: serializeError(error) })
+	info: (msg: string, fields?: Fields) => console.info(entry(msg, fields)),
+	warn: (msg: string, fields?: Fields, error?: unknown) => console.warn(entry(msg, fields, error)),
+	error: (msg: string, fields?: Fields, error?: unknown) => console.error(entry(msg, fields, error))
 };
