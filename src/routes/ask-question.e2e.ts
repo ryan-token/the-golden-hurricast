@@ -36,12 +36,37 @@ test('the question dialog opens, validates without submitting, and closes', asyn
 	await expect(dialog).toBeHidden();
 });
 
+test('thanks the listener in the dialog, then closes it', async ({ page }) => {
+	await page.clock.install();
+	await page.goto('/');
+	const dialog = await openDialog(page);
+	const question = dialog.getByLabel('What is your question for us?');
+
+	await question.fill('Who starts at quarterback?');
+	// The honeypot keeps the question from going upstream; the endpoint still answers ok.
+	await page.locator('#ask-question-website').fill('x', { force: true });
+	await dialog.getByRole('button', { name: 'Submit' }).click();
+
+	await expect(dialog.getByText(/Thanks for submitting a question/)).toBeVisible();
+	await expect(question).toBeHidden();
+	await page.clock.runFor(4000);
+	await expect(dialog).toBeHidden();
+
+	// Reopening starts a fresh, empty form.
+	await openDialog(page);
+	await expect(question).toBeVisible();
+	await expect(question).toHaveValue('');
+});
+
 test.describe('without JavaScript', () => {
 	test.use({ javaScriptEnabled: false });
 
 	test('the dialog still opens and closes', async ({ page }) => {
 		await page.goto('/podcast/');
 		const dialog = await openDialog(page);
+		// Without JavaScript, Playwright can't click an element mid-transition: let the
+		// opening animation finish first.
+		await expect(dialog).toHaveCSS('opacity', '1');
 
 		await dialog.getByRole('button', { name: 'Close' }).first().click();
 		await expect(dialog).toBeHidden();

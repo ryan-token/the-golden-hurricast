@@ -4,7 +4,8 @@
 
 	Works without JavaScript: the button opens the native `<dialog>` with the Invoker
 	Commands API, and the form posts to `/api/questions/`, which redirects to a confirmation
-	page. With JavaScript, the submission happens in place and the result is announced inline.
+	page. With JavaScript, the submission happens in place: the dialog thanks the listener,
+	then closes itself.
 -->
 <script lang="ts">
 	import Button from '#lib/components/Button.svelte';
@@ -12,6 +13,8 @@
 
 	const DIALOG_ID = 'ask-question';
 	const ACTION = '/api/questions/';
+	/** How long the thank-you shows before the dialog closes itself. */
+	const THANKS_MS = 4000;
 
 	type Status = { kind: 'error'; message: string } | { kind: 'failed' } | undefined;
 
@@ -19,8 +22,14 @@
 	let pending = $state(false);
 	/** Problem shown inside the dialog. */
 	let status = $state<Status>();
-	/** Confirmation shown next to the button once the dialog has closed. */
+	/** The question was sent: the dialog shows a thank-you, then closes. */
 	let submitted = $state(false);
+
+	$effect(() => {
+		if (!submitted) return;
+		const timer = setTimeout(() => dialog?.close(), THANKS_MS);
+		return () => clearTimeout(timer);
+	});
 
 	async function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
@@ -36,7 +45,6 @@
 
 		pending = true;
 		status = undefined;
-		submitted = false;
 
 		try {
 			const response = await fetch(ACTION, {
@@ -47,7 +55,6 @@
 
 			if (response.ok) {
 				form.reset();
-				dialog?.close();
 				submitted = true;
 			} else if (response.status === 400 || response.status === 429) {
 				const body: { message?: string } = await response.json().catch(() => ({}));
@@ -63,25 +70,28 @@
 	}
 </script>
 
-<div>
-	<Button commandfor={DIALOG_ID} command="show-modal" onclick={() => (submitted = false)}>
-		Ask a Question for the Show
-	</Button>
-
-	<p role="status" class="mt-2 empty:hidden">
-		{#if submitted}
-			Thanks for submitting a question! We'll try to answer it on the podcast soon.
-		{/if}
-	</p>
-</div>
+<Button commandfor={DIALOG_ID} command="show-modal">Ask a Question for the Show</Button>
 
 <dialog
 	id={DIALOG_ID}
 	bind:this={dialog}
 	closedby="any"
 	aria-labelledby="ask-question-title"
-	onclose={() => (status = undefined)}
-	class="m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg bg-white text-ink shadow-xl backdrop:bg-black/50"
+	onclose={() => {
+		status = undefined;
+		submitted = false;
+	}}
+	class={[
+		'm-auto w-[calc(100%-2rem)] max-w-lg rounded-lg bg-white text-ink shadow-xl',
+		// Fades and slides in (and back out), like Bootstrap's modal. Pure CSS, so it also
+		// animates when opened without JavaScript; `transition-discrete` keeps the dialog
+		// rendered while it animates out.
+		'-translate-y-8 opacity-0 transition-[opacity,translate,display,overlay] transition-discrete duration-300 ease-out',
+		'open:translate-y-0 open:opacity-100 starting:open:-translate-y-8 starting:open:opacity-0',
+		'backdrop:bg-black/0 backdrop:transition-[background-color,display,overlay] backdrop:transition-discrete backdrop:duration-150',
+		'open:backdrop:bg-black/50 starting:open:backdrop:bg-black/0',
+		'motion-reduce:transition-none motion-reduce:backdrop:transition-none'
+	]}
 >
 	<div class="flex items-center justify-between border-b border-line px-4 py-3">
 		<h2 id="ask-question-title" class="text-xl">Ask a Question</h2>
@@ -105,12 +115,12 @@
 
 	<form method="POST" action={ACTION} onsubmit={submit}>
 		<div class="space-y-4 p-4">
-			<p>
+			<p hidden={submitted}>
 				Submit a question and we'll do our best to answer it on an upcoming show. Feel free to ask
 				anonymously if you'd prefer us not to mention your name.
 			</p>
 
-			<div>
+			<div hidden={submitted}>
 				<label for="ask-question-text" class="mb-2 block font-bold">
 					What is your question for us?
 				</label>
@@ -126,7 +136,7 @@
 				></textarea>
 			</div>
 
-			<div>
+			<div hidden={submitted}>
 				<label for="ask-question-name" class="mb-2 block font-bold">
 					What is your name? <span class="font-normal text-muted">(optional)</span>
 				</label>
@@ -154,7 +164,11 @@
 			</div>
 
 			<div id="ask-question-status" aria-live="polite">
-				{#if status?.kind === 'error'}
+				{#if submitted}
+					<p class="text-lg">
+						✅ Thanks for submitting a question! We'll try to answer it on the podcast soon.
+					</p>
+				{:else if status?.kind === 'error'}
 					<p class="text-danger">{status.message}</p>
 				{:else if status?.kind === 'failed'}
 					<p class="text-danger">
@@ -175,7 +189,9 @@
 			>
 				Close
 			</button>
-			<Button type="submit" disabled={pending}>{pending ? 'Submitting…' : 'Submit'}</Button>
+			{#if !submitted}
+				<Button type="submit" disabled={pending}>{pending ? 'Submitting…' : 'Submit'}</Button>
+			{/if}
 		</div>
 	</form>
 </dialog>
