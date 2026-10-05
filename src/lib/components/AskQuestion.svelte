@@ -31,6 +31,28 @@
 		return () => clearTimeout(timer);
 	});
 
+	/**
+	 * Clicking the backdrop closes the dialog. `closedby="any"` does that natively (even without
+	 * JavaScript); browsers that don't support it yet (Safari) get this instead. The press has to
+	 * start on the backdrop too, so selecting text in a field and letting go outside doesn't close it.
+	 */
+	function closeOnBackdropClick(dialog: HTMLDialogElement) {
+		if ('closedBy' in HTMLDialogElement.prototype) return;
+
+		// Clicks on the backdrop target the dialog itself, which has no padding of its own.
+		let pressedBackdrop = false;
+		const press = (event: PointerEvent) => (pressedBackdrop = event.target === dialog);
+		const click = (event: MouseEvent) => {
+			if (pressedBackdrop && event.target === dialog) dialog.close();
+		};
+		dialog.addEventListener('pointerdown', press);
+		dialog.addEventListener('click', click);
+		return () => {
+			dialog.removeEventListener('pointerdown', press);
+			dialog.removeEventListener('click', click);
+		};
+	}
+
 	async function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
 		const form = event.currentTarget;
@@ -76,6 +98,7 @@
 	id={DIALOG_ID}
 	bind:this={dialog}
 	closedby="any"
+	{@attach closeOnBackdropClick}
 	aria-labelledby="ask-question-title"
 	onclose={() => {
 		status = undefined;

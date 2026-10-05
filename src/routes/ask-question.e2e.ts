@@ -58,6 +58,34 @@ test('thanks the listener in the dialog, then closes it', async ({ page }) => {
 	await expect(question).toHaveValue('');
 });
 
+test('clicking the backdrop closes the dialog where closedby is unsupported (Safari)', async ({
+	page
+}) => {
+	// Act like Safari, which has no `closedby` yet, so only our fallback can close the dialog.
+	await page.addInitScript(() => {
+		delete (HTMLDialogElement.prototype as { closedBy?: string }).closedBy;
+	});
+	await page.goto('/');
+	await page.locator('dialog').evaluate((dialog) => dialog.removeAttribute('closedby'));
+
+	const dialog = await openDialog(page);
+	const question = dialog.getByLabel('What is your question for us?');
+	await expect(dialog).toHaveCSS('opacity', '1');
+
+	// Clicking inside, or selecting text and letting go over the backdrop, keeps it open.
+	await question.click();
+	const box = (await question.boundingBox())!;
+	await page.mouse.move(box.x + 10, box.y + 10);
+	await page.mouse.down();
+	await page.mouse.move(5, 5);
+	await page.mouse.up();
+	await expect(dialog).toBeVisible();
+
+	// A click on the backdrop closes it.
+	await page.mouse.click(5, 5);
+	await expect(dialog).toBeHidden();
+});
+
 test.describe('without JavaScript', () => {
 	test.use({ javaScriptEnabled: false });
 
