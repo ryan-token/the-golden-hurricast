@@ -1,10 +1,8 @@
-# These rules will change if you change your site’s custom domains or HTTPS settings
+# Netlify redirects (copied into the build by @sveltejs/adapter-netlify).
 
-/* /index.html 200
-
-# Redirect domain aliases to primary domain
+# Redirect domain aliases to the primary domain
 https://www.goldenhurricast.com/* https://www.thegoldenhurricast.com/:splat 301!
-
-# Optional: Redirect default Netlify subdomain to primary domain
 https://thegoldenhurricast.netlify.com/* https://www.thegoldenhurricast.com/:splat 301!
 
+# Old URLs are redirected in src/hooks.server.ts: Netlify sends paths without a static file
+# to the SvelteKit function before applying this file.

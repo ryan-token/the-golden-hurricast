@@ -1,7 +1,6 @@
 [build]
-  command = "gatsby build"
-  publish = "public"
+  command = "npm run build"
+  # Where @sveltejs/adapter-netlify writes the site (`publish` in vite.config.ts). Set here
+  # so it overrides the old Gatsby `public` directory in Netlify's UI settings.
+  publish = "build"
   environment = { NODE_VERSION = "24" }
-
-[[plugins]]
-  package = "netlify-plugin-image-optim"

@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/* Design tokens. Every colour, font and size used by the site comes from here. */
+@theme {
+	--font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+	--color-ink: #212529;
+	/* Darker than Bootstrap's #6c757d so it passes WCAG AA on the grey hero background. */
+	--color-muted: #5c636a;
+	--color-line: #dee2e6;
+	--color-surface: #e9ecef;
+	--color-navbar: #212529;
+	--color-primary: #0d6efd;
+	--color-primary-hover: #0b5ed7;
+	--color-danger: #dc3545;
+	--color-x: #000000;
+	/* Darker than Bluesky's brand blue so white text on it meets WCAG AA. */
+	--color-bluesky: #0070e0;
+
+	/* Like Bootstrap's responsive font sizes: large headings scale down on small screens. */
+	--text-h1: min(calc(1.375rem + 1.5vw), 2.5rem);
+	--text-h1--line-height: 1.25;
+	--text-h2: min(calc(1.325rem + 0.9vw), 2rem);
+	--text-h2--line-height: 1.25;
+	--text-h3: min(calc(1.3rem + 0.6vw), 1.75rem);
+	--text-h3--line-height: 1.25;
+	--text-h4: min(calc(1.275rem + 0.3vw), 1.5rem);
+	--text-h4--line-height: 1.25;
+
+	/* Width of page bodies. */
+	--container-content: 68rem;
+
+	--shadow-card: 0 5px 15px -7px rgb(0 0 0 / 0.6);
+	--shadow-photo: 0 2px 5px -2px rgb(0 0 0 / 0.6);
+}
+
+@layer base {
+	html {
+		color-scheme: light;
+	}
+
+	body {
+		/* No `antialiased`: on macOS it renders text noticeably thinner than the old site did. */
+		@apply bg-white font-sans text-base leading-normal text-ink;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		@apply leading-tight font-medium;
+	}
+
+	h1 {
+		@apply text-h1;
+	}
+	h2 {
+		@apply text-h2;
+	}
+	h3 {
+		@apply text-h3;
+	}
+	h4 {
+		@apply text-h4;
+	}
+	h5 {
+		@apply text-xl;
+	}
+	h6 {
+		@apply text-base;
+	}
+
+	a {
+		@apply text-primary hover:text-primary-hover;
+	}
+
+	hr {
+		@apply my-4 border-line;
+	}
+
+	/* Selects look the same in every browser: Safari's native control ignores padding and
+	   height. Leave room on the right for the chevron (e.g. `pr-8`). */
+	select:not([multiple]) {
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%235c636a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E");
+		background-position: right 0.5rem center;
+		background-repeat: no-repeat;
+		background-size: 0.75rem;
+	}
+
+	:focus-visible {
+		@apply outline-2 outline-offset-2 outline-primary;
+	}
+}
+
+/*
+ * Links are never underlined, anywhere. This is deliberately outside any layer so it
+ * outranks everything, including the Typography plugin and `underline` utilities.
+ * Colour sets links apart instead: #0d6efd is 3.4:1 against body text (WCAG's 3:1 for
+ * links), and keyboard focus gets an outline.
+ */
+a {
+	text-decoration-line: none;
+}
+
+/* Blog posts style text and links like the rest of the site. */
+.prose {
+	--tw-prose-body: var(--color-ink);
+	--tw-prose-headings: var(--color-ink);
+	--tw-prose-bold: var(--color-ink);
+	--tw-prose-links: var(--color-primary);
+}
+.prose a {
+	font-weight: inherit;
+}
+.prose a:hover {
+	color: var(--color-primary-hover);
+}

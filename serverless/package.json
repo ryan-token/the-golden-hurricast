@@ -1,16 +1,41 @@
 {
-  "name": "serverless",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "esbuild": "^0.28.0",
-    "serverless-esbuild": "^1.57.2",
-    "serverless-plugin-common-excludes": "^4.0.0"
-  }
+	"name": "hurricast-api",
+	"private": true,
+	"version": "1.0.0",
+	"description": "AWS backend for thegoldenhurricast.com: merch catalog, inventory, Stripe checkout and fulfillment, listener questions",
+	"license": "MIT",
+	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"check": "tsc --noEmit",
+		"lint": "eslint .",
+		"test": "vitest --run",
+		"deploy:dev": "npm run check && npm run lint && npm test && npm run verify:bundle && serverless deploy --stage dev --package .serverless-package/dev",
+		"deploy:prod": "npm run check && npm run lint && npm test && serverless package --stage prod --package .serverless-package/prod && node scripts/verify-bundle.ts .serverless-package/prod && serverless deploy --stage prod --package .serverless-package/prod",
+		"inventory": "node scripts/inventory.ts",
+		"orders": "node scripts/orders.ts",
+		"questions": "node scripts/questions.ts",
+		"seed-inventory": "node scripts/seed-inventory.ts",
+		"verify:bundle": "serverless package --stage dev --package .serverless-package/dev && node scripts/verify-bundle.ts .serverless-package/dev"
+	},
+	"dependencies": {
+		"stripe": "^23.0.0",
+		"valibot": "^1.5.0"
+	},
+	"devDependencies": {
+		"@aws-sdk/client-dynamodb": "^3.1146.0",
+		"@aws-sdk/client-ssm": "^3.1146.0",
+		"@aws-sdk/lib-dynamodb": "^3.1146.0",
+		"@aws-sdk/util-dynamodb": "^3.996.9",
+		"@eslint/js": "^10.0.1",
+		"@types/aws-lambda": "^8.10.164",
+		"@types/node": "^24.19.1",
+		"eslint": "^10.12.0",
+		"globals": "^17.13.0",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.71.0",
+		"vitest": "^4.1.11"
+	}
 }

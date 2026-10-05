@@ -1,0 +1,262 @@
+# Hurricast API — see README.md for the architecture and DynamoDB data model.
+# Deploy: npm run deploy:dev | npm run deploy:prod (AWS_PROFILE=tgh-ryan, via direnv)
+org: thegoldenhurricast
+service: hurricast-api
+# v4 auto-updates within this range.
+frameworkVersion: '~4.43.0'
+
+provider:
+  name: aws
+  runtime: nodejs24.x
+  architecture: arm64
+  region: us-east-2
+  stage: ${opt:stage, 'dev'}
+  # No aliases or provisioned concurrency, so don't keep a version per deploy.
+  versionFunctions: false
+  memorySize: 512
+  timeout: 15
+  logRetentionInDays: 90
+  logs:
+    lambda:
+      logFormat: JSON
+      applicationLogLevel: INFO
+      systemLogLevel: WARN
+    httpApi: true
+  stackTags:
+    project: thegoldenhurricast
+  environment:
+    STAGE: ${sls:stage}
+    TABLE_NAME: ${self:custom.tableName}
+    STRIPE_SECRET_KEY_PARAM: /hurricast/${sls:stage}/stripe-secret-key
+    STRIPE_WEBHOOK_SECRET_PARAM: /hurricast/${sls:stage}/stripe-webhook-secret
+    SLACK_WEBHOOK_URL_PARAM: /hurricast/${sls:stage}/slack-webhook-url
+    SITE_API_KEY_PARAM: /hurricast/${sls:stage}/site-api-key
+  httpApi:
+    # Called server-to-server by the website, never from browsers: no CORS.
+    shouldStartNameWithService: true
+  iam:
+    role:
+      # Each function gets its own role with only the permissions below it.
+      mode: perFunction
+
+stages:
+  prod:
+    params:
+      allowedOrigins: https://www.thegoldenhurricast.com
+      allowedOriginPattern: ''
+  dev:
+    params:
+      allowedOrigins: http://localhost:5173,http://localhost:4173
+      # Netlify deploy previews and branch deploys.
+      allowedOriginPattern: '^https://[a-z0-9-]+--thegoldenhurricast\.netlify\.app$'
+
+custom:
+  tableName: hurricast-${sls:stage}
+  # Reusable least-privilege IAM statements.
+  iam:
+    stripeKey:
+      Effect: Allow
+      Action: ssm:GetParameter
+      Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/stripe-secret-key
+    siteKey:
+      Effect: Allow
+      Action: ssm:GetParameter
+      Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/site-api-key
+    orderReadWrite:
+      Effect: Allow
+      Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
+      Resource: !GetAtt Table.Arn
+
+# Each function gets its own bundle, so the small ones don't ship Stripe.
+package:
+  individually: true
+
+build:
+  esbuild:
+    sourcemap:
+      type: linked
+      setNodeOptions: true
+    format: esm
+    outExtension:
+      .js: .mjs
+
+functions:
+  products:
+    handler: src/handlers/products.handler
+    events:
+      - httpApi: GET /products
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+          - ${self:custom.iam.stripeKey}
+          - Effect: Allow
+            Action: dynamodb:Query
+            Resource: !GetAtt Table.Arn
+
+  checkout:
+    handler: src/handlers/checkout.handler
+    environment:
+      ALLOWED_ORIGINS: ${param:allowedOrigins}
+      ALLOWED_ORIGIN_PATTERN: ${param:allowedOriginPattern}
+    # Just under HTTP API's 30-second limit, so a Checkout Session create that exhausts its
+    # Stripe retries (src/merch/stripe.ts) still leaves time to release the reservation.
+    timeout: 29
+    events:
+      - httpApi: POST /checkout
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+          - ${self:custom.iam.stripeKey}
+          - Effect: Allow
+            Action:
+              [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
+            Resource: !GetAtt Table.Arn
+
+  checkoutSession:
+    handler: src/handlers/checkout-session.handler
+    events:
+      - httpApi: GET /checkout/sessions/{sessionId}
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+          - ${self:custom.iam.stripeKey}
+          - ${self:custom.iam.orderReadWrite}
+
+  cancelCheckout:
+    handler: src/handlers/cancel-checkout.handler
+    events:
+      - httpApi: POST /checkout/{orderId}/cancel
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+          - ${self:custom.iam.stripeKey}
+          - ${self:custom.iam.orderReadWrite}
+
+  stripeWebhook:
+    handler: src/handlers/stripe-webhook.handler
+    events:
+      - httpApi: POST /stripe/webhook
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.stripeKey}
+          - ${self:custom.iam.orderReadWrite}
+          - Effect: Allow
+            Action: ssm:GetParameter
+            Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/stripe-webhook-secret
+
+  questions:
+    handler: src/handlers/questions.handler
+    events:
+      - httpApi: POST /questions
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+          - Effect: Allow
+            Action: [dynamodb:PutItem, dynamodb:UpdateItem]
+            Resource: !GetAtt Table.Arn
+
+  sweep:
+    handler: src/handlers/sweep.handler
+    timeout: 120
+    events:
+      - schedule: rate(10 minutes)
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.stripeKey}
+          - ${self:custom.iam.orderReadWrite}
+          - Effect: Allow
+            Action: dynamodb:Query
+            Resource: !Sub '${Table.Arn}/index/GSI1'
+
+  notify:
+    handler: src/handlers/notify.handler
+    # A batch stops at its first failure, but give slow Slack responses (10s each) room.
+    timeout: 60
+    iam:
+      role:
+        statements:
+          - Effect: Allow
+            Action: ssm:GetParameter
+            Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/slack-webhook-url
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt Table.StreamArn
+          startingPosition: LATEST
+          batchSize: 10
+          maximumRetryAttempts: 5
+          maximumRecordAgeInSeconds: 86400
+          bisectBatchOnFunctionError: true
+          functionResponseType: ReportBatchItemFailures
+          filterPatterns:
+            - eventName: [INSERT]
+              dynamodb:
+                NewImage:
+                  Type:
+                    S: [Question]
+            - eventName: [MODIFY]
+              dynamodb:
+                NewImage:
+                  Type:
+                    S: [Order]
+                  Status:
+                    S: [PAID]
+                OldImage:
+                  Status:
+                    S: [{ anything-but: [PAID] }]
+
+resources:
+  Resources:
+    Table:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+      Properties:
+        TableName: ${self:custom.tableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PK, AttributeType: S }
+          - { AttributeName: SK, AttributeType: S }
+          - { AttributeName: GSI1PK, AttributeType: S }
+          - { AttributeName: GSI1SK, AttributeType: S }
+          - { AttributeName: GSI2PK, AttributeType: S }
+          - { AttributeName: GSI2SK, AttributeType: S }
+        KeySchema:
+          - { AttributeName: PK, KeyType: HASH }
+          - { AttributeName: SK, KeyType: RANGE }
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - { AttributeName: GSI1PK, KeyType: HASH }
+              - { AttributeName: GSI1SK, KeyType: RANGE }
+            Projection: { ProjectionType: ALL }
+          - IndexName: GSI2
+            KeySchema:
+              - { AttributeName: GSI2PK, KeyType: HASH }
+              - { AttributeName: GSI2SK, KeyType: RANGE }
+            Projection: { ProjectionType: ALL }
+        TimeToLiveSpecification:
+          AttributeName: ExpiresAt
+          Enabled: true
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        DeletionProtectionEnabled: true
+        SSESpecification:
+          SSEEnabled: true
+
+  extensions:
+    # Rate-limit the public API (requests/second across all routes).
+    HttpApiStage:
+      Properties:
+        DefaultRouteSettings:
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 25
