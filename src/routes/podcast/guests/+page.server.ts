@@ -18,8 +18,9 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 		}));
 
 	return {
+		// Whole episodes for the headliners: their sheets list them with a play button.
 		featured: Object.fromEntries(
-			FEATURED_GUESTS.map((guest) => [guest.slug, appearances(guest.appearances)])
+			FEATURED_GUESTS.map((guest) => [guest.slug, resolveAppearances(episodes, guest.appearances)])
 		),
 		// Every group as sections: one per school for groups organised that way, otherwise one.
 		groups: GUEST_GROUPS.map((group) => ({

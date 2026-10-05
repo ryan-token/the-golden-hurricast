@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
+	import { archive } from '#lib/archive.svelte.js';
 	import EpisodeRow from '#lib/components/EpisodeRow.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
@@ -35,8 +36,11 @@
 
 	// Filters live in the URL, so they work without JavaScript (the form submits) and can be
 	// shared. With JavaScript, `filter` sets them directly and keeps the URL in step.
-	let season = $derived(page.url.searchParams.get('season') ?? '');
-	let query = $derived(page.url.searchParams.get('q') ?? '');
+	// After a shallow URL change, `page.url` stays the page's original address and the filtered
+	// one is `page.shallow.url`, including when Back returns here from an episode.
+	const url = $derived(page.shallow?.url ?? page.url);
+	let season = $derived(url.searchParams.get('season') ?? '');
+	let query = $derived(url.searchParams.get('q') ?? '');
 
 	const normalize = (text: string) =>
 		text
@@ -76,15 +80,18 @@
 			['season', season],
 			['q', query]
 		].flatMap(([name, value]) => (value.trim() ? [`${name}=${encodeURIComponent(value)}`] : []));
-		goto(`${page.url.pathname}${params.length ? `?${params.join('&')}` : ''}`, {
-			replace: true,
-			shallow: true
-		});
+		// Remembered for the episode page's "All episodes" link.
+		archive.search = params.length ? `?${params.join('&')}` : '';
+		goto(`${page.url.pathname}${archive.search}`, { replace: true, shallow: true });
 	}
 
-	/** Applies anything typed or picked before the page finished loading. Runs once. */
+	/**
+	 * Runs once the page is interactive: remembers the filters it opened with, and applies
+	 * anything typed or picked before then.
+	 */
 	function catchUp(form: HTMLFormElement) {
 		untrack(() => {
+			archive.search = url.search;
 			const fields = new FormData(form);
 			if (fields.get('q') !== query || (fields.get('season') ?? '') !== season) filter(form);
 		});

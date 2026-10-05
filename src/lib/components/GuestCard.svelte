@@ -43,7 +43,7 @@
 				type="button"
 				commandfor={sheetId}
 				command="show-modal"
-				class="stretched-link text-left focus-ring-none"
+				class="stretched-link cursor-pointer text-left focus-ring-none"
 			>
 				{guest.name}
 			</button>
@@ -86,7 +86,7 @@
 <GuestSheet id={sheetId} {guest} {appearances} />
 
 <style>
-	article:has(button:focus-visible) {
+	article:has(h3 button:focus-visible) {
 		outline: 2px solid var(--color-gold);
 		outline-offset: 3px;
 	}

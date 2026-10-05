@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { afterNavigate } from '$app/navigation';
+	import { archive } from '#lib/archive.svelte.js';
 	import BigPlayer from '#lib/components/BigPlayer.svelte';
 	import CompactEpisode from '#lib/components/CompactEpisode.svelte';
 	import Icon from '#lib/components/Icon.svelte';
@@ -23,6 +25,22 @@
 	const path = $derived(episodePath(episode.slug));
 
 	const player = getPlayer();
+
+	/**
+	 * "All episodes" works like the browser's Back button when the archive is the page before
+	 * this one, so the search and scroll position come back as they were. Otherwise it links to
+	 * the archive with its last filters.
+	 */
+	let fromArchive = false;
+	afterNavigate(({ from }) => (fromArchive = from?.route.id === '/podcast/episodes'));
+
+	function backToArchive(event: MouseEvent) {
+		const newTab =
+			event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+		if (!fromArchive || newTab) return;
+		event.preventDefault();
+		history.back();
+	}
 
 	/** Chapter timestamps in the show notes are buttons (see #lib/server/episodes). */
 	function chapters(container: HTMLElement) {
@@ -72,7 +90,7 @@
 	{:else}
 		<p class="rounded-lg border border-dashed border-line p-5 text-sm text-muted">
 			{direction === 'Next'
-				? 'This is the newest episode. Next week’s is on its way.'
+				? 'This is the newest episode. You’re all caught up.'
 				: 'This is where it all began.'}
 		</p>
 	{/if}
@@ -82,7 +100,8 @@
 	<header class="bg-sand">
 		<div class="page pt-8 pb-10 sm:pt-10 sm:pb-12">
 			<a
-				href="/podcast/episodes/"
+				href="/podcast/episodes/{archive.search}"
+				onclick={backToArchive}
 				class="inline-flex items-center gap-1.5 text-sm font-semibold text-link"
 			>
 				<Icon name="back" class="size-4" /> All episodes

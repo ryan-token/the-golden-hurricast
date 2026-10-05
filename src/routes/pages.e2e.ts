@@ -47,21 +47,65 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 	}
 });
 
-test('searching the episode archive filters as you type and keeps the URL in step', async ({
+test('searching the episode archive filters as you type, keeps the URL in step and survives Back', async ({
 	page
 }) => {
-	await page.goto('/podcast/episodes/');
 	const search = page.getByRole('searchbox', { name: 'Search episodes' });
+	const results = page.getByRole('main').getByRole('article');
+	const heading = page.locator('h1');
+	const backToArchive = page.getByRole('main').getByRole('link', { name: 'All episodes' });
 
+	await page.goto('/podcast/episodes/');
 	await search.pressSequentially('stay golden');
 	await expect(search).toHaveValue('stay golden');
 	await expect(page).toHaveURL('/podcast/episodes/?q=stay%20golden');
-	await expect(page.getByRole('main').getByRole('article')).toHaveCount(1);
+	await expect(results).toHaveCount(1);
 
 	// The filtered URL works on its own, without JavaScript's help.
 	await page.reload();
-	await expect(page.getByRole('main').getByRole('article')).toHaveCount(1);
+	await expect(results).toHaveCount(1);
+
+	/** Waits for the page swap to finish (the URL changes first), as a person would. */
+	const expectSearchRestored = async () => {
+		await expect(heading).toHaveText('Every episode');
+		await expect(page).toHaveURL('/podcast/episodes/?q=stay%20golden');
+		await expect(search).toHaveValue('stay golden');
+		await expect(results).toHaveCount(1);
+	};
+	const openResult = async () => {
+		await results.getByRole('link').click();
+		await expect(heading).toHaveText('Stay Golden');
+	};
+
+	// Back from an episode returns to the search, not the whole archive: with the browser's
+	// Back button, the episode page's "All episodes" link, or that link after moving on to
+	// another episode.
+	await openResult();
+	await page.goBack();
+	await expectSearchRestored();
+
+	await openResult();
+	await backToArchive.click();
+	await expectSearchRestored();
+
+	await openResult();
+	await page.getByRole('link', { name: /^Next/ }).click();
+	await expect(heading).not.toHaveText('Stay Golden');
+	await backToArchive.click();
+	await expectSearchRestored();
 });
+
+for (const path of ['/podcast/', '/podcast/guests/']) {
+	test(`${path} opens a headliner's sheet from their card`, async ({ page }) => {
+		await page.goto(path);
+		await page.getByRole('button', { name: 'Tre Lamb' }).click();
+
+		const sheet = page.getByRole('dialog', { name: 'Tre Lamb' });
+		await expect(sheet).toBeVisible();
+		await sheet.getByRole('button', { name: 'Close' }).click();
+		await expect(sheet).toBeHidden();
+	});
+}
 
 test('an episode whose title changed redirects to its current page', async ({ request }) => {
 	const response = await request.get('/podcast/episodes/1-1-an-old-title/', { maxRedirects: 0 });

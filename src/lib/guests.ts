@@ -43,7 +43,7 @@ export const FEATURED_GUESTS: FeaturedGuest[] = [
 		name: 'Tre Lamb',
 		role: 'Head Football Coach',
 		short: 'Football',
-		bio: 'Announced as Tulsa’s 35th head football coach in December 2024, and now in his second season leading the Golden Hurricane.',
+		bio: 'Announced as Tulsa’s 35th head football coach in December 2024. He sat down with us a month into the job to talk culture, scheme, and recruiting.',
 		bioUrl: 'https://tulsahurricane.com/staff-directory/tre-lamb/2657',
 		appearances: ['7-16']
 	},
@@ -52,7 +52,7 @@ export const FEATURED_GUESTS: FeaturedGuest[] = [
 		name: 'Eric Konkol',
 		role: 'Head Men’s Basketball Coach',
 		short: 'Men’s Basketball',
-		bio: 'Our most frequent coaching guest. Coach Konkol has joined the show four times to break down the men’s basketball program.',
+		bio: 'Our most frequent coaching guest. Coach Konkol has been breaking down the men’s basketball program with us since he arrived in 2022.',
 		bioUrl: 'https://tulsahurricane.com/staff-directory/eric-konkol/2458',
 		appearances: ['4-29', '6-8', '7-7', '8-10']
 	},
@@ -61,7 +61,7 @@ export const FEATURED_GUESTS: FeaturedGuest[] = [
 		name: 'Angie Nelp',
 		role: 'Head Women’s Basketball Coach',
 		short: 'Women’s Basketball',
-		bio: 'A native of Eufaula, Oklahoma, and a Colorado State graduate. Coach Nelp has twice joined us to talk women’s basketball.',
+		bio: 'A native of Eufaula, Oklahoma, and a Colorado State graduate. Coach Nelp joins us to talk women’s basketball.',
 		bioUrl: 'https://tulsahurricane.com/sports/womens-basketball/roster/coaches/angie-nelp/1685',
 		appearances: ['4-21', '7-9']
 	}

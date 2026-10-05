@@ -1,8 +1,9 @@
 <script lang="ts">
+	import GuestSheet from '#lib/components/GuestSheet.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
 	import Seo from '#lib/components/Seo.svelte';
-	import { episodeLabel, episodePath } from '#lib/episodes.js';
+	import { episodeLabel, episodePath, type Episode } from '#lib/episodes.js';
 	import { GUEST_PHOTOS } from '#lib/guest-photos.js';
 	import { FEATURED_GUESTS } from '#lib/guests.js';
 	import { breadcrumbs } from '#lib/structured-data.js';
@@ -10,7 +11,7 @@
 
 	let { data }: PageProps = $props();
 
-	type Appearance = (typeof data.featured)[string][number];
+	type Appearance = Pick<Episode, 'slug' | 'season' | 'number' | 'bonus' | 'title'>;
 </script>
 
 <Seo
@@ -49,29 +50,39 @@
 <section aria-labelledby="featured" class="page">
 	<h2 id="featured" class="sr-only">Featured guests</h2>
 	<!-- On wide screens each card is a subgrid of the list, so photos, names, and episode chips
-	     line up across all five whatever the length of a role. -->
+	     line up across all five whatever the length of a role. Like the cards on the podcast
+	     page, each one opens the guest's sheet; the episode chips link straight to episodes. -->
 	<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
 		{#each FEATURED_GUESTS as guest (guest.slug)}
+			{@const sheetId = `guest-${guest.slug}`}
 			<li
-				class="grid grid-cols-[5rem_minmax(0,1fr)] content-start gap-x-4 gap-y-2 rounded-lg border border-line bg-surface p-3 lg:row-span-3 lg:grid-cols-1 lg:grid-rows-subgrid lg:gap-y-3"
+				class="featured group relative grid grid-cols-[5rem_minmax(0,1fr)] content-start gap-x-4 gap-y-2 rounded-lg border border-line bg-surface p-3 transition-[translate,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-line-strong hover:shadow-lift lg:row-span-3 lg:grid-cols-1 lg:grid-rows-subgrid lg:gap-y-3"
 			>
 				<!-- The wrapper is the grid item: enhanced:img renders a <picture> around the image. -->
-				<div class="row-span-2 lg:row-span-1">
+				<div class="row-span-2 overflow-hidden rounded-md bg-sand lg:row-span-1">
 					<enhanced:img
 						src={GUEST_PHOTOS[guest.slug]}
 						alt=""
 						sizes="(min-width: 64rem) 12rem, 5rem"
 						loading="lazy"
-						class="aspect-4/5 w-full rounded-md object-cover"
+						class="aspect-4/5 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
 					/>
 				</div>
 				<div>
-					<p class="font-display text-2xl leading-none font-extrabold text-heading">
-						{guest.name}
-					</p>
+					<h3 class="font-display text-2xl leading-none font-extrabold text-heading">
+						<button
+							type="button"
+							commandfor={sheetId}
+							command="show-modal"
+							class="stretched-link cursor-pointer text-left focus-ring-none"
+						>
+							{guest.name}
+						</button>
+					</h3>
 					<p class="mt-1 text-sm text-muted">{guest.role}</p>
 				</div>
-				{@render episodeLinks(data.featured[guest.slug], 'content-start')}
+				{@render episodeLinks(data.featured[guest.slug], 'relative z-10 content-start')}
+				<GuestSheet id={sheetId} {guest} appearances={data.featured[guest.slug]} />
 			</li>
 		{/each}
 	</ul>
@@ -118,3 +129,11 @@
 		</section>
 	{/each}
 </div>
+
+<style>
+	/* The card shows keyboard focus for the name button that opens its sheet. */
+	.featured:has(h3 button:focus-visible) {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+</style>

@@ -158,7 +158,8 @@
 	aria-labelledby="story"
 	class="page grid gap-10 pb-16 sm:pb-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16"
 >
-	<div>
+	<!-- Stays in view beside the timeline on wide screens, just below the sticky site header. -->
+	<div class="lg:sticky lg:top-24 lg:self-start">
 		<h2 id="story" class="display text-d2">How we got here</h2>
 		<p class="mt-4 text-lead text-muted">
 			When Reign Cane Sports signed off, Tulsa fans were left without a show of their own. We
