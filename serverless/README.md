@@ -43,7 +43,7 @@ This follows Stripe's [fulfillment](https://docs.stripe.com/checkout/fulfillment
 - **Fulfillment is idempotent.** The webhook, the success page and the sweeper all call the same `reconcileCheckoutSession()`, which always re-reads the session from Stripe. Every order change is a DynamoDB transaction conditioned on the order's current status, so retries and concurrent calls can't double-count.
 - **The sweeper is the safety net**: it expires checkouts Stripe left open, catches missed webhooks, and releases reservations whose checkout was never created.
 - **A payment that lands after its reservation was released** is still honored and flagged `oversold` (the Slack message says so).
-- Paid orders and new questions are posted to Slack by a DynamoDB-stream consumer (`src/handlers/notify.ts`). It handles records in order and stops at the first failure, so Lambda's retries (up to 5, for records under a day old) never repost messages that already went out.
+- New questions and paid orders are posted to Slack, each to its own channel, by a DynamoDB-stream consumer (`src/handlers/notify.ts`). It handles records in order and stops at the first failure, so Lambda's retries (up to 5, for records under a day old) never repost messages that already went out.
 
 Customer details (name, address, email) stay in Stripe. The table stores only what's needed to manage stock.
 
@@ -124,12 +124,13 @@ Both type-check, lint and test, then package the stage into `.serverless-package
 
 Secrets live in SSM Parameter Store (SecureString) and are read at runtime, never baked into the Lambda configuration:
 
-| Parameter                                  | Value                                                                                                                 |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `/hurricast/<stage>/stripe-secret-key`     | Stripe restricted key (`rk_…`): Products/Prices read, Checkout Sessions write, PaymentIntents read                    |
-| `/hurricast/<stage>/stripe-webhook-secret` | Signing secret of the stage's webhook endpoint (`whsec_…`)                                                            |
-| `/hurricast/<stage>/slack-webhook-url`     | Slack incoming webhook                                                                                                |
-| `/hurricast/<stage>/site-api-key`          | Shared key the website sends in `x-api-key` (32+ random characters); the same value is the site's `HURRICAST_API_KEY` |
+| Parameter                                     | Value                                                                                                                 |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `/hurricast/<stage>/stripe-secret-key`        | Stripe restricted key (`rk_…`): Products/Prices read, Checkout Sessions write, PaymentIntents read                    |
+| `/hurricast/<stage>/stripe-webhook-secret`    | Signing secret of the stage's webhook endpoint (`whsec_…`)                                                            |
+| `/hurricast/<stage>/slack-webhook-url`        | Slack incoming webhook for listener questions (#listener-questions)                                                   |
+| `/hurricast/<stage>/slack-orders-webhook-url` | Slack incoming webhook for paid merch orders (#biz)                                                                   |
+| `/hurricast/<stage>/site-api-key`             | Shared key the website sends in `x-api-key` (32+ random characters); the same value is the site's `HURRICAST_API_KEY` |
 
 The Stripe webhook endpoint (an "event destination" in the Dashboard) for each stage points at `<api>/stripe/webhook`, uses the newest stable API version the Dashboard offers (the event's version doesn't matter: the handler reads only the event type and session id, then re-reads the session with the pinned `STRIPE_API_VERSION`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`.
 
@@ -139,7 +140,7 @@ The table has deletion protection, point-in-time recovery and a `Retain` policy.
 
 In this order, so the site never points at an API that isn't ready (`<stage>` is e.g. `prod`):
 
-1. Create the stage's secrets in SSM (SecureString, under `/hurricast/<stage>/`): `stripe-secret-key`, `site-api-key` (32+ random characters) and `slack-webhook-url`.
+1. Create the stage's secrets in SSM (SecureString, under `/hurricast/<stage>/`): `stripe-secret-key`, `site-api-key` (32+ random characters), `slack-webhook-url` (questions) and `slack-orders-webhook-url` (orders).
 2. Deploy it (`npm run deploy:<stage>`, adding a script for a new stage), then add a Stripe event destination for `<api>/stripe/webhook` with the four events above, and store its signing secret as `stripe-webhook-secret`.
 3. Track each product's stock: `npm run inventory -- --stage <stage> track <productId> "<name>" <count>`.
 4. In Netlify, set `HURRICAST_API_URL` (the stage's API) and `HURRICAST_API_KEY` (its `site-api-key`) for the deploy context that should use it.

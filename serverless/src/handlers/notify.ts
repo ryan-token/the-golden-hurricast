@@ -25,14 +25,14 @@ export const handler = async (event: DynamoDBStreamEvent): Promise<DynamoDBBatch
 			if (!newItem) continue;
 
 			if (record.eventName === 'INSERT' && newItem.Type === 'Question') {
-				await postToSlack(questionMessage(questionFromItem(newItem)));
+				await postToSlack('questions', questionMessage(questionFromItem(newItem)));
 			} else if (
 				record.eventName === 'MODIFY' &&
 				newItem.Type === 'Order' &&
 				newItem.Status === 'PAID' &&
 				oldItem?.Status !== 'PAID'
 			) {
-				await postToSlack(paidOrderMessage(orderFromItem(newItem)));
+				await postToSlack('orders', paidOrderMessage(orderFromItem(newItem)));
 			}
 		} catch (error) {
 			log.error('Failed to send notification', { eventId: record.eventID }, error);

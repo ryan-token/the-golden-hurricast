@@ -31,7 +31,6 @@ provider:
     TABLE_NAME: ${self:custom.tableName}
     STRIPE_SECRET_KEY_PARAM: /hurricast/${sls:stage}/stripe-secret-key
     STRIPE_WEBHOOK_SECRET_PARAM: /hurricast/${sls:stage}/stripe-webhook-secret
-    SLACK_WEBHOOK_URL_PARAM: /hurricast/${sls:stage}/slack-webhook-url
     SITE_API_KEY_PARAM: /hurricast/${sls:stage}/site-api-key
   httpApi:
     # Called server-to-server by the website, never from browsers: no CORS.
@@ -181,12 +180,17 @@ functions:
     handler: src/handlers/notify.handler
     # A batch stops at its first failure, but give slow Slack responses (10s each) room.
     timeout: 60
+    environment:
+      SLACK_QUESTIONS_WEBHOOK_URL_PARAM: /hurricast/${sls:stage}/slack-webhook-url
+      SLACK_ORDERS_WEBHOOK_URL_PARAM: /hurricast/${sls:stage}/slack-orders-webhook-url
     iam:
       role:
         statements:
           - Effect: Allow
             Action: ssm:GetParameter
-            Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/slack-webhook-url
+            Resource:
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/slack-webhook-url
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/slack-orders-webhook-url
     events:
       - stream:
           type: dynamodb
