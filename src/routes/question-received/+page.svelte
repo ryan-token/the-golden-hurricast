@@ -23,7 +23,7 @@
 	<PageHeader {title}>
 		{#snippet lead()}
 			{#if data.outcome === 'received'}
-				Thanks for your question. We go through them before every recap, and we’ll try to answer
+				Thanks for your question. We go through them before every show, and we’ll try to answer
 				yours on the podcast soon.
 			{:else if data.outcome === 'invalid'}
 				Your question can’t be empty and can be up to 2,000 characters long, and your name can be up

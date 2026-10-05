@@ -10,7 +10,7 @@ async function openDialog(page: Page) {
 	return dialog;
 }
 
-test('the question dialog opens, validates without submitting, and closes', async ({ page }) => {
+test('Send stays disabled until there is a question, and the dialog closes', async ({ page }) => {
 	const submissions: string[] = [];
 	page.on('request', (request) => {
 		if (request.method() === 'POST') submissions.push(request.url());
@@ -19,21 +19,32 @@ test('the question dialog opens, validates without submitting, and closes', asyn
 	await page.goto('/');
 	const dialog = await openDialog(page);
 	const question = dialog.getByLabel('Your question');
+	const send = dialog.getByRole('button', { name: 'Send question' });
 
-	// Empty: the browser's own validation stops the submission.
-	await dialog.getByRole('button', { name: 'Send question' }).click();
-	expect(await question.evaluate((el: HTMLTextAreaElement) => el.validity.valueMissing)).toBe(true);
-
-	// Only whitespace: caught before anything is sent.
+	await expect(send).toBeDisabled();
 	await question.fill('   ');
-	await dialog.getByRole('button', { name: 'Send question' }).click();
-	await expect(dialog.getByText('Please enter a question.')).toBeVisible();
-	await expect(question).toHaveAttribute('aria-invalid', 'true');
-	await expect(question).toBeFocused();
+	await expect(send).toBeDisabled();
+	// Enter in the name field can't submit past the disabled button either.
+	await dialog.getByLabel(/Your name/).press('Enter');
+	await question.fill('Who starts at quarterback?');
+	await expect(send).toBeEnabled();
+	await question.fill('');
+	await expect(send).toBeDisabled();
 	expect(submissions).toEqual([]);
 
 	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(dialog).toBeHidden();
+});
+
+test.describe('without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('Send starts enabled, so the form can still be posted', async ({ page }) => {
+		await page.goto('/');
+		await expect(
+			page.locator('form[action="/api/questions/"]').first().locator('button[type="submit"]')
+		).toBeEnabled();
+	});
 });
 
 test('thanks the listener in the dialog', async ({ page }) => {

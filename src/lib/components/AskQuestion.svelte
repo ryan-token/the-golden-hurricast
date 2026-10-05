@@ -7,6 +7,7 @@
 	JavaScript, the submission happens in place and the dialog thanks the listener.
 -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Button, { type ButtonSize, type ButtonVariant } from '#lib/components/Button.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
@@ -29,6 +30,16 @@
 	/** The question that was sent, shown back in the thank-you. */
 	let sent = $state<{ question: string; name: string }>();
 	let heading = $state<HTMLElement>();
+	/**
+	 * What's typed so far. `undefined` in the server-rendered page, so its button stays enabled
+	 * and the form still sends without JavaScript (the field's `required` and the server's
+	 * validation cover that case). Once mounted, Send waits for a question.
+	 */
+	let draft = $state<string>();
+	const canSend = $derived(draft === undefined || draft.trim() !== '');
+	onMount(() => {
+		draft ??= '';
+	});
 
 	// The form is replaced by the thank-you: move focus to its heading so it's announced.
 	$effect(() => {
@@ -40,13 +51,8 @@
 		const form = event.currentTarget;
 		const data = new FormData(form);
 		const question = String(data.get('question') ?? '').trim();
-
-		if (question === '') {
-			status = { kind: 'error', message: 'Please enter a question.' };
-			const field = form.elements.namedItem('question');
-			if (field instanceof HTMLTextAreaElement) field.focus();
-			return;
-		}
+		// The button is disabled until there's a question, which also blocks Enter in the name field.
+		if (question === '') return;
 
 		pending = true;
 		status = undefined;
@@ -60,6 +66,7 @@
 
 			if (response.ok) {
 				sent = { question, name: String(data.get('name') ?? '').trim() };
+				draft = '';
 				form.reset();
 			} else if (response.status === 400 || response.status === 429) {
 				const body: { message?: string } = await response.json().catch(() => ({}));
@@ -128,7 +135,7 @@
 					</footer>{/if}
 			</blockquote>
 			<p class="text-muted">
-				We go through questions before every recap. If yours makes the cut, you’ll hear it on the
+				We go through questions before every show. If yours makes the cut, you’ll hear it on the
 				next episode.
 			</p>
 			<Button commandfor={id} command="close" class="justify-self-end">Done</Button>
@@ -148,7 +155,8 @@
 					rows="4"
 					required
 					maxlength="2000"
-					placeholder="Who starts at quarterback against Memphis, and why is it obvious?"
+					placeholder="What’s your over/under on wins this season?"
+					bind:value={draft}
 					aria-invalid={status?.kind === 'error' ? 'true' : undefined}
 					aria-describedby={status?.kind === 'error' ? `${id}-status` : undefined}
 					class={field}></textarea>
@@ -192,7 +200,9 @@
 
 			<div class="flex justify-end gap-3">
 				<Button variant="quiet" commandfor={id} command="close">Cancel</Button>
-				<Button type="submit" disabled={pending}>{pending ? 'Sending…' : 'Send question'}</Button>
+				<Button type="submit" disabled={pending || !canSend}
+					>{pending ? 'Sending…' : 'Send question'}</Button
+				>
 			</div>
 		</form>
 	{/if}
