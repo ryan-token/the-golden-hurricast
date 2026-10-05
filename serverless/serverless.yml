@@ -1,6 +1,8 @@
 # Hurricast API — see README.md for the architecture and DynamoDB data model.
 # Deploy: npm run deploy:dev | npm run deploy:prod (AWS_PROFILE=tgh-ryan, via direnv)
 org: thegoldenhurricast
+# The Serverless Dashboard only lists services that set both `org` and `app`.
+app: hurricast-api
 service: hurricast-api
 # v4 auto-updates within this range.
 frameworkVersion: '~4.43.0'
