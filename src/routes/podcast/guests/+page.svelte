@@ -48,25 +48,30 @@
 
 <section aria-labelledby="featured" class="page">
 	<h2 id="featured" class="sr-only">Featured guests</h2>
+	<!-- On wide screens each card is a subgrid of the list, so photos, names and episode chips
+	     line up across all five whatever the length of a role. -->
 	<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
 		{#each FEATURED_GUESTS as guest (guest.slug)}
-			<li class="flex gap-4 rounded-lg border border-line bg-surface p-3 lg:flex-col">
-				<enhanced:img
-					src={GUEST_PHOTOS[guest.slug]}
-					alt=""
-					sizes="(min-width: 64rem) 12rem, 5rem"
-					loading="lazy"
-					class="aspect-4/5 w-20 shrink-0 rounded-md object-cover lg:w-full"
-				/>
-				<div class="grid content-start gap-2">
-					<div>
-						<p class="font-display text-2xl leading-none font-extrabold text-heading">
-							{guest.name}
-						</p>
-						<p class="mt-1 text-sm text-muted">{guest.role}</p>
-					</div>
-					{@render episodeLinks(data.featured[guest.slug])}
+			<li
+				class="grid grid-cols-[5rem_minmax(0,1fr)] content-start gap-x-4 gap-y-2 rounded-lg border border-line bg-surface p-3 lg:row-span-3 lg:grid-cols-1 lg:grid-rows-subgrid lg:gap-y-3"
+			>
+				<!-- The wrapper is the grid item: enhanced:img renders a <picture> around the image. -->
+				<div class="row-span-2 lg:row-span-1">
+					<enhanced:img
+						src={GUEST_PHOTOS[guest.slug]}
+						alt=""
+						sizes="(min-width: 64rem) 12rem, 5rem"
+						loading="lazy"
+						class="aspect-4/5 w-full rounded-md object-cover"
+					/>
 				</div>
+				<div>
+					<p class="font-display text-2xl leading-none font-extrabold text-heading">
+						{guest.name}
+					</p>
+					<p class="mt-1 text-sm text-muted">{guest.role}</p>
+				</div>
+				{@render episodeLinks(data.featured[guest.slug], 'content-start')}
 			</li>
 		{/each}
 	</ul>

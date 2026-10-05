@@ -75,7 +75,9 @@
 			class="-mx-(--gutter) flex snap-x snap-mandatory scroll-px-(--gutter) gap-4 overflow-x-auto px-(--gutter) pt-1 pb-4 lg:mx-0 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-0"
 		>
 			{#each FEATURED_GUESTS as guest (guest.slug)}
-				<li class="w-64 shrink-0 snap-start lg:w-auto">
+				<li
+					class="w-64 shrink-0 snap-start lg:row-span-5 lg:grid lg:w-auto lg:grid-rows-subgrid lg:gap-y-0"
+				>
 					<GuestCard {guest} appearances={data.appearances[guest.slug]} />
 				</li>
 			{/each}
