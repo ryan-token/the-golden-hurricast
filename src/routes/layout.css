@@ -76,11 +76,6 @@
 		@apply text-primary hover:text-primary-hover;
 	}
 
-	/* Links inside running text are underlined, so they don't rely on color alone. */
-	:where(p) a {
-		@apply underline underline-offset-2;
-	}
-
 	hr {
 		@apply my-4 border-line;
 	}
@@ -98,4 +93,26 @@
 	:focus-visible {
 		@apply outline-2 outline-offset-2 outline-primary;
 	}
+}
+
+/*
+ * Links are never underlined, anywhere. This is deliberately outside any layer so it
+ * outranks everything, including the Typography plugin and `underline` utilities.
+ * Colour sets links apart instead: #0d6efd is 3.4:1 against body text (WCAG's 3:1 for
+ * links), and keyboard focus gets an outline.
+ */
+a {
+	text-decoration-line: none;
+}
+
+/* Blog posts style text and links like the rest of the site. */
+.prose {
+	--tw-prose-body: var(--color-ink);
+	--tw-prose-links: var(--color-primary);
+}
+.prose a {
+	font-weight: inherit;
+}
+.prose a:hover {
+	color: var(--color-primary-hover);
 }

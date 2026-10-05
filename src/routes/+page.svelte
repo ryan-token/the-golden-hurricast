@@ -156,7 +156,7 @@
 							target="_blank"
 							rel="noopener noreferrer"
 							class={[
-								'flex max-w-[420px] items-center gap-3.5 rounded-xl px-5 py-4 text-white no-underline shadow-md transition-opacity hover:text-white hover:opacity-90',
+								'flex max-w-[420px] items-center gap-3.5 rounded-xl px-5 py-4 text-white shadow-md transition-opacity hover:text-white hover:opacity-90',
 								background
 							]}
 						>

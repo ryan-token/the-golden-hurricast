@@ -27,7 +27,7 @@
 
 <header class="site-header sticky top-0 z-50 bg-navbar text-white">
 	<nav aria-label="Main" class="mx-auto flex items-center justify-between gap-4 p-2.5">
-		<a href="/" class="flex items-center gap-4 text-xl text-white no-underline hover:text-white">
+		<a href="/" class="flex items-center gap-4 text-xl text-white hover:text-white">
 			<enhanced:img src={logo} alt="" class="size-12" sizes="48px" />
 			{SITE.name}
 		</a>
@@ -54,7 +54,7 @@
 					<a
 						href={link.href}
 						aria-current={!link.external && isCurrent(link.href) ? 'page' : undefined}
-						class="block px-2 py-2 text-white/60 no-underline hover:text-white/80 aria-[current=page]:text-white"
+						class="block px-2 py-2 text-white/60 hover:text-white/80 aria-[current=page]:text-white"
 					>
 						{link.label}
 					</a>

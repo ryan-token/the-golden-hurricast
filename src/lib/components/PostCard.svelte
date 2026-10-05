@@ -19,10 +19,7 @@
 	class="relative rounded-[5px] border border-line bg-white p-2.5 shadow-card transition-shadow hover:shadow-lg has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-primary"
 >
 	<svelte:element this={`h${headingLevel}`} class="text-lg leading-snug font-bold">
-		<a
-			href={post.path}
-			class="no-underline after:absolute after:inset-0 focus-visible:outline-none"
-		>
+		<a href={post.path} class="after:absolute after:inset-0 focus-visible:outline-none">
 			{post.title}
 		</a>
 	</svelte:element>

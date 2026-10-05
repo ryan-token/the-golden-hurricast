@@ -15,7 +15,7 @@
 	let { variant = 'primary', children, class: className, ...rest }: Props = $props();
 
 	const classes = $derived([
-		'inline-flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-base no-underline transition-colors',
+		'inline-flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-base transition-colors',
 		'disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:pointer-events-none aria-disabled:opacity-40',
 		{
 			'border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover hover:text-white':

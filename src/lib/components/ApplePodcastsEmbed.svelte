@@ -52,7 +52,7 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		inert={ready}
-		class="group flex size-full items-center gap-5 p-5 text-ink no-underline hover:text-ink sm:gap-6 sm:p-8"
+		class="group flex size-full items-center gap-5 p-5 text-ink hover:text-ink sm:gap-6 sm:p-8"
 	>
 		<!-- The wrapper, not the image, is the flex item, so the artwork never gets squeezed. -->
 		<span
