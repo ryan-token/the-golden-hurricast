@@ -41,14 +41,14 @@
 
 <PageHeader title="Everyone who’s pulled up a chair" back={{ href: '/podcast/', label: 'Podcast' }}>
 	{#snippet lead()}
-		University leadership, coaches, former players, the people who cover Tulsa for a living and our
+		University leadership, coaches, former players, the people who cover Tulsa for a living, and our
 		counterparts around the American and beyond. Each one links to the episodes they were on.
 	{/snippet}
 </PageHeader>
 
 <section aria-labelledby="featured" class="page">
 	<h2 id="featured" class="sr-only">Featured guests</h2>
-	<!-- On wide screens each card is a subgrid of the list, so photos, names and episode chips
+	<!-- On wide screens each card is a subgrid of the list, so photos, names, and episode chips
 	     line up across all five whatever the length of a role. -->
 	<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
 		{#each FEATURED_GUESTS as guest (guest.slug)}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { untrack } from 'svelte';
 	import EpisodeRow from '#lib/components/EpisodeRow.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PageHeader from '#lib/components/PageHeader.svelte';
@@ -81,16 +82,18 @@
 		});
 	}
 
-	/** Applies anything typed or picked before the page finished loading. */
+	/** Applies anything typed or picked before the page finished loading. Runs once. */
 	function catchUp(form: HTMLFormElement) {
-		const fields = new FormData(form);
-		if (fields.get('q') !== query || (fields.get('season') ?? '') !== season) filter(form);
+		untrack(() => {
+			const fields = new FormData(form);
+			if (fields.get('q') !== query || (fields.get('season') ?? '') !== season) filter(form);
+		});
 	}
 </script>
 
 <Seo
 	title="Every episode"
-	description="Every episode of The Golden Hurricast since August 2018, by season. Search for an opponent, a guest or a game."
+	description="Every episode of The Golden Hurricast since August 2018, by season. Search for an opponent, a guest, or a game."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'Podcast', path: '/podcast/' },
@@ -100,8 +103,8 @@
 
 <PageHeader title="Every episode" back={{ href: '/podcast/', label: 'Podcast' }}>
 	{#snippet lead()}
-		{data.episodes.length} episodes since August 2018, newest first. Search for an opponent, a guest or
-		a game you’d rather forget.
+		{data.episodes.length} episodes since August 2018, newest first. Search for an opponent, a guest,
+		or a game you’d rather forget.
 	{/snippet}
 </PageHeader>
 

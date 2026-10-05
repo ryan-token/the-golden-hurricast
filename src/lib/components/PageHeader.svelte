@@ -1,6 +1,6 @@
 <!--
 	@component
-	The top of a page: an optional link back up, the title and a lead paragraph.
+	The top of a page: an optional link back up, the title, and a lead paragraph.
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';

@@ -41,11 +41,12 @@ const DATE = new Intl.DateTimeFormat('en-US', {
 /** "Sep 29, 2026". */
 export const formatDate = (isoDate: string) => DATE.format(new Date(isoDate));
 
-/** "1 hr 49 min" or "43 min". */
+/** "1 hr 49 min", "2 hr" or "43 min". */
 export function formatDuration(seconds: number): string {
-	const hours = Math.floor(seconds / 3600);
-	const minutes = Math.round((seconds % 3600) / 60);
-	return hours ? `${hours} hr ${minutes} min` : `${minutes} min`;
+	const total = Math.round(seconds / 60);
+	const [hours, minutes] = [Math.floor(total / 60), total % 60];
+	if (!hours) return `${minutes} min`;
+	return minutes ? `${hours} hr ${minutes} min` : `${hours} hr`;
 }
 
 /** A player clock: "1:02:07" or "4:05". */

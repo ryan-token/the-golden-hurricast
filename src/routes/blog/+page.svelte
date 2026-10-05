@@ -12,7 +12,7 @@
 
 <Seo
 	title="Blog"
-	description="Hurc's Corner, The Golden Hurricast's blog from 2019 to 2024: stats deep dives, TU history and Golden Hurricane milestones."
+	description="Hurc's Corner, The Golden Hurricast's blog from 2019 to 2024: stats deep dives, TU history, and Golden Hurricane milestones."
 	jsonLd={breadcrumbs([
 		{ name: 'Home', path: '/' },
 		{ name: 'Blog', path: '/blog/' }
@@ -21,7 +21,7 @@
 
 <PageHeader title="Hurc’s Corner">
 	{#snippet lead()}
-		Our blog from 2019 to 2024: stat deep dives, TU history and milestones along the way. Our
+		Our blog from 2019 to 2024: stat deep dives, TU history, and milestones along the way. Our
 		occasional writing lives on Patreon now, but these posts stay up for the record.
 	{/snippet}
 	<ArrowLink href={LINKS.patreon} target="_blank" rel="noopener">Read us on Patreon</ArrowLink>

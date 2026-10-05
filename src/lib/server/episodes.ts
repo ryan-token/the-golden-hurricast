@@ -172,6 +172,9 @@ const notesProcessor = unified()
 	.use(rehypeTidyNotes)
 	.use(rehypeStringify);
 
+/** The show talks in Central Time: an episode out on a Tuesday evening is Tuesday's. */
+const PUBLISHED_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' });
+
 /** Parses the feed into episodes, newest first. Exported for tests. */
 export function parseFeed(xml: string): EpisodeWithNotes[] {
 	const parser = new XMLParser({
@@ -182,53 +185,72 @@ export function parseFeed(xml: string): EpisodeWithNotes[] {
 	const feed = v.parse(FeedSchema, parser.parse(xml));
 	const slugs = new Set<string>();
 
-	return feed.rss.channel.item.map((raw) => {
-		const item = v.parse(ItemSchema, raw);
-		const published = new Date(item.pubDate).toISOString().slice(0, 10);
-		const parsed = parseTitle(item.title, published);
-		// Spotify sprinkles invisible word joiners through its show notes.
-		const description = item.description.replace(/⁠/g, '');
+	// Slugs are handed out oldest first, so an episode's address never changes when a later
+	// one repeats its title: the newcomer gets the date on the end.
+	return feed.rss.channel.item
+		.toReversed()
+		.map((raw) => {
+			const item = v.parse(ItemSchema, raw);
+			const published = PUBLISHED_DATE.format(new Date(item.pubDate));
+			const parsed = parseTitle(item.title, published);
+			// Spotify sprinkles invisible word joiners through its show notes.
+			const description = item.description.replace(/⁠/g, '');
 
-		let slug = slugify([parsed.season, parsed.number, parsed.bonus && 'bonus', parsed.title]);
-		if (slugs.has(slug)) slug = `${slug}-${published}`;
-		slugs.add(slug);
+			let slug = slugify([parsed.season, parsed.number, parsed.bonus && 'bonus', parsed.title]);
+			if (slugs.has(slug)) slug = `${slug}-${published}`;
+			slugs.add(slug);
 
-		const notes = String(notesProcessor.processSync(description));
-		return {
-			...parsed,
-			slug,
-			published,
-			duration: parseDuration(item['itunes:duration']),
-			summary: truncate(toText(notes), 280),
-			audio: item.enclosure['@_url'],
-			notes
-		};
-	});
+			const notes = String(notesProcessor.processSync(description));
+			return {
+				...parsed,
+				slug,
+				published,
+				duration: parseDuration(item['itunes:duration']),
+				summary: truncate(toText(notes), 280),
+				audio: item.enclosure['@_url'],
+				notes
+			};
+		})
+		.reverse();
 }
 
 const CACHE_MS = 5 * 60_000;
 let cached: { at: number; episodes: Promise<EpisodeWithNotes[]> } | undefined;
 
 async function fetchFeed(): Promise<EpisodeWithNotes[]> {
-	const response = await fetch(LINKS.rss, { signal: AbortSignal.timeout(10_000) });
+	// Well inside the function's own time limit, so a hung feed fails before the request does.
+	const response = await fetch(LINKS.rss, { signal: AbortSignal.timeout(6_000) });
 	if (!response.ok) throw new Error(`Podcast feed responded ${response.status}`);
 	return parseFeed(await response.text());
 }
 
-/** Every episode with its show notes, newest first. Cached for a few minutes per instance. */
+/**
+ * Every episode with its show notes, newest first. Cached for a few minutes per instance; once
+ * that's up, requests get the cached copy straight away while a fresh one loads behind them.
+ */
 async function loadAll(): Promise<EpisodeWithNotes[]> {
 	if (cached && Date.now() - cached.at < CACHE_MS) return cached.episodes;
 
-	// Keep serving the last good copy if the feed has a bad moment, including to requests that
-	// arrive while the refresh is still in flight.
 	const stale = cached;
-	const episodes = fetchFeed().catch((error: unknown) => {
-		cached = stale;
-		if (stale) return stale.episodes;
-		throw error;
-	});
-	cached = { at: Date.now(), episodes };
-	return episodes;
+	const refresh = fetchFeed();
+
+	if (!stale) {
+		cached = { at: Date.now(), episodes: refresh };
+		// Don't hold on to a failure: the next request tries again.
+		refresh.catch(() => {
+			if (cached?.episodes === refresh) cached = undefined;
+		});
+		return refresh;
+	}
+
+	// Restarting the clock on the stale copy means a feed outage costs one fetch every few
+	// minutes, rather than one per request.
+	cached = { at: Date.now(), episodes: stale.episodes };
+	refresh.then(
+		(episodes) => (cached = { at: Date.now(), episodes: Promise.resolve(episodes) }),
+		(error: unknown) => console.error('Failed to refresh the podcast feed:', error)
+	);
+	return stale.episodes;
 }
 
 const withoutNotes = ({ notes, ...episode }: EpisodeWithNotes): Episode => episode;
@@ -236,6 +258,11 @@ const withoutNotes = ({ notes, ...episode }: EpisodeWithNotes): Episode => episo
 /** Every episode, newest first, without show notes (they're only needed on episode pages). */
 export async function getEpisodes(): Promise<Episode[]> {
 	return (await loadAll()).map(withoutNotes);
+}
+
+/** The handful of newest episodes the home and podcast pages lead with. */
+export async function getLatestEpisodes(): Promise<Episode[]> {
+	return (await getEpisodes()).slice(0, 5);
 }
 
 export async function getEpisode(slug: string) {
@@ -256,18 +283,18 @@ export async function getEpisode(slug: string) {
 	};
 }
 
+/** The numbering at the start of a slug: "9-6-", "3-21-bonus-" or "2-13-part-1-". */
+const SLUG_NUMBERING = /^\d+-\d+(?:\.\d+)?-(?:bonus-)?(?:part-\d+-)?/;
+
 /**
  * An episode whose title has changed keeps its old links working: "9-6-old-title" finds 9-6.
  * Returns the current slug, if any.
  */
 export async function findRenamedEpisode(slug: string): Promise<string | undefined> {
-	const match = /^(\d+)-(\d+(?:\.\d+)?)-/.exec(slug);
-	if (!match) return undefined;
-	const [season, number] = [Number(match[1]), Number(match[2])];
-	const bonus = slug.slice(match[0].length).startsWith('bonus-');
-	return (await loadAll()).find(
-		(episode) => episode.season === season && episode.number === number && episode.bonus === bonus
-	)?.slug;
+	const numbering = SLUG_NUMBERING.exec(slug)?.[0];
+	if (!numbering) return undefined;
+	return (await loadAll()).find((episode) => SLUG_NUMBERING.exec(episode.slug)?.[0] === numbering)
+		?.slug;
 }
 
 /** CDN caching for pages built from the feed: fresh for 10 minutes, then refreshed in the background. */
@@ -281,11 +308,17 @@ export function cacheEpisodePage(setHeaders: (headers: Record<string, string>) =
 /** The episodes a guest appeared on (see `#lib/guests.ts` for the reference format), oldest first. */
 export function resolveAppearances(episodes: Episode[], refs: string[]): Episode[] {
 	return refs.flatMap((ref) => {
-		const episode = episodes.find(
+		const matches = episodes.filter(
 			({ slug, season, number, bonus }) =>
 				ref === slug || ref === `${season}-${number}${bonus ? 'b' : ''}`
 		);
-		if (!episode) console.warn(`No episode matches the guest appearance "${ref}"`);
-		return episode ? [episode] : [];
+		if (matches.length !== 1) {
+			console.warn(
+				matches.length
+					? `The guest appearance "${ref}" matches more than one episode; use its slug`
+					: `No episode matches the guest appearance "${ref}"`
+			);
+		}
+		return matches.slice(0, 1);
 	});
 }

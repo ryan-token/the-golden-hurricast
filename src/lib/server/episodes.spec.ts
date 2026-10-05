@@ -53,29 +53,30 @@ test('slugs keep half-episode numbers but drop other punctuation', () => {
 	expect(slugify([3, 4, false, 'J.J.’s No Sports Zone'])).toBe('3-4-jjs-no-sports-zone');
 });
 
-test('parseFeed builds unique slugs and cleans up show notes', () => {
-	const item = (title: string, notes: string) => `
+test('parseFeed builds stable, unique slugs and cleans up show notes', () => {
+	const item = (title: string, notes: string, pubDate = 'Tue, 29 Sep 2026 17:26:56 GMT') => `
 		<item>
 			<title><![CDATA[${title}]]></title>
 			<description><![CDATA[${notes}]]></description>
-			<pubDate>Tue, 29 Sep 2026 17:26:56 GMT</pubDate>
+			<pubDate>${pubDate}</pubDate>
 			<enclosure url="https://anchor.fm/s/1/podcast/play/2/a.mp3" length="1" type="audio/mpeg"/>
 			<itunes:duration>01:49:09</itunes:duration>
 		</item>`;
 	const xml = `<rss><channel>
 		${item('9-6: Same Title', '<p>Hi.We recap <a href="https://example.com">A&amp;M</a>.</p><p><br></p><script>alert(1)</script><p>3:20 - Arkansas Recap</p>')}
-		${item('9-6: Same Title', '<p>Again.</p>')}
+		${item('9-6: Same Title', '<p>Again.</p>', 'Wed, 23 Sep 2026 00:02:00 GMT')}
 	</channel></rss>`;
 
 	const [first, second] = parseFeed(xml);
 
 	expect(first).toMatchObject({
-		slug: '9-6-same-title',
 		published: '2026-09-29',
 		duration: 6549,
 		summary: 'Hi. We recap A&M. 3:20 - Arkansas Recap'
 	});
-	expect(second.slug).toBe('9-6-same-title-2026-09-29');
+	// The older episode keeps the plain slug. It went out the evening of Sep 22, Central Time.
+	expect(first.slug).toBe('9-6-same-title-2026-09-29');
+	expect(second).toMatchObject({ slug: '9-6-same-title', published: '2026-09-22' });
 	expect(first.notes).toBe(
 		'<p>Hi. We recap <a href="https://example.com" target="_blank" rel="noopener noreferrer">A&#x26;M</a>.</p>' +
 			'<p><button type="button" data-seek="200">3:20</button> - Arkansas Recap</p>'

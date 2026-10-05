@@ -30,7 +30,7 @@
 		untrack(() => player.save());
 	});
 
-	// Lock screen, Control Center and hardware media keys.
+	// Lock screen, Control Center, and hardware media keys.
 	$effect(() => {
 		const episode = player.episode;
 		if (!episode || !('mediaSession' in navigator)) return;
@@ -68,7 +68,7 @@
 	{@const episode = player.episode}
 	<aside
 		aria-label="Now playing"
-		class="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto max-w-3xl animate-rise rounded-xl bg-chrome p-2 text-on-chrome shadow-float [view-transition-name:player] sm:p-2.5 dark:bg-chrome-raised dark:ring-1 dark:ring-white/10"
+		class="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto max-w-3xl animate-rise rounded-xl bg-player p-2 text-on-chrome shadow-float ring-1 ring-player-edge [view-transition-name:player] sm:p-2.5"
 	>
 		<div class="flex items-center gap-3">
 			<div class="relative shrink-0">

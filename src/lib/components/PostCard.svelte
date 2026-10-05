@@ -1,6 +1,6 @@
 <!--
 	@component
-	A blog post teaser: title, date and excerpt. The whole card is clickable (the title link
+	A blog post teaser: title, date, and excerpt. The whole card is clickable (the title link
 	is stretched over it), but only the title is announced as the link.
 -->
 <script lang="ts">

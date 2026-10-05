@@ -32,8 +32,8 @@
 				Golden Hurricane talk, every week since&nbsp;2018.
 			</h1>
 			<p class="mt-6 max-w-[36rem] text-lead">
-				Ryan Token and Matt Rechtien are two TU alums who recap every game, preview every opponent
-				and argue about the depth chart so you don’t have to. Independent, listener-funded and only
+				Ryan Token and Matt Rechtien are two TU alums who recap every game, preview every opponent,
+				and argue about the depth chart so you don’t have to. Independent, listener-funded, and only
 				occasionally wrong.
 			</p>
 			<div class="mt-6"><AskQuestion /></div>
@@ -43,7 +43,7 @@
 		<Crest
 			size="lg"
 			priority
-			alt="The Golden Hurricast crest: three superhero Golden Hurricane mascots circling the show’s name"
+			alt="The Golden Hurricast logo: three superhero Golden Hurricane mascots circling the show’s name"
 			sizes="(min-width: 64rem) 24rem, 70vw"
 			class="mx-auto w-[min(70vw,24rem)] shadow-lift max-lg:row-start-1 max-lg:w-36 sm:max-lg:w-52"
 		/>
@@ -70,30 +70,24 @@
 	</div>
 </section>
 
-{#if data.thisSeason.length}
-	<section aria-labelledby="this-season" class="page py-16 sm:py-20">
-		<SectionHeading
-			id="this-season"
-			lede="Every episode this season, newest first."
-			more={{ href: '/podcast/episodes/', label: 'Every episode' }}
-		>
-			Season {data.latest.season}, so far
-		</SectionHeading>
-		<ol class="grid gap-3">
-			{#each data.thisSeason as episode (episode.slug)}
-				<li><EpisodeRow {episode} showSeason={false} /></li>
-			{/each}
-		</ol>
-	</section>
-{/if}
+<section aria-labelledby="latest" class="page py-16 sm:py-20">
+	<SectionHeading id="latest" more={{ href: '/podcast/episodes/', label: 'Every episode' }}>
+		Latest episodes
+	</SectionHeading>
+	<ol class="grid gap-3">
+		{#each data.recent as episode (episode.slug)}
+			<li><EpisodeRow {episode} /></li>
+		{/each}
+	</ol>
+</section>
 
 <section aria-labelledby="guests" class="page pb-16 sm:pb-20">
 	<SectionHeading
 		id="guests"
-		lede="Plus beat writers, former players and a rival-site blogger nearly every game week."
+		lede="Plus beat writers, former players, and a rival-site blogger/podcaster nearly every game week."
 		more={{ href: '/podcast/#guests', label: 'Meet the guests' }}
 	>
-		The president, the AD and three head coaches have all been on.
+		The president, the AD, and multiple head coaches have all been on.
 	</SectionHeading>
 	<ul
 		class="-mx-(--gutter) flex snap-x snap-mandatory scroll-px-(--gutter) gap-4 overflow-x-auto px-(--gutter) pb-2 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0"
@@ -120,22 +114,26 @@
 	</ul>
 </section>
 
-<section aria-labelledby="patreon" class="bg-royal text-white dark:bg-surface">
+<section aria-labelledby="patreon" class="bg-band text-on-chrome">
 	<div class="page grid gap-12 py-16 sm:py-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
 		<div>
-			<h2 id="patreon" class="display text-d1 text-white!">
+			<h2 id="patreon" class="display text-d1 text-on-chrome">
 				Back the show. Back the&nbsp;Hurricane.
 			</h2>
 			<p class="mt-5 max-w-md text-lead text-on-chrome-muted">
 				There are no ads on the show. Patreon is how listeners keep it that way, and keep it
 				independent. Patrons also get bonus content: video versions of episodes, the occasional blog
-				post and our private Discord.
+				post, and our private Discord.
 			</p>
 			<div class="mt-8 flex items-center gap-5 border-t border-white/15 pt-8">
 				<p class="font-display text-7xl leading-none font-black text-gold">10%</p>
 				<p class="max-w-64 text-on-chrome-muted">
-					of every pledge goes to the Hurricane Impact NIL collective, so your support reaches Tulsa
-					athletes too.
+					of every pledge goes to TU’s <a
+						href={LINKS.loyalAlwaysTrue}
+						target="_blank"
+						rel="noopener"
+						class="link text-on-chrome">Loyal Always True fund</a
+					>, so your support reaches Tulsa athletes too.
 				</p>
 			</div>
 		</div>
@@ -156,7 +154,8 @@
 					<div>
 						<h3 class="font-display text-2xl leading-none font-extrabold">
 							{tier.name}
-							{#if featured}<span class="ml-1 font-sans text-xs font-semibold">· Recommended</span
+							{#if featured}<span class="ml-1 font-sans text-xs font-semibold whitespace-nowrap"
+									>· Recommended</span
 								>{/if}
 						</h3>
 						<ul class="mt-2 grid gap-1 text-sm">
@@ -176,8 +175,8 @@
 						target="_blank"
 						rel="noopener"
 						size="sm"
-						variant={featured ? 'primary' : 'on-blue'}
-						class={['col-span-2 sm:col-span-1', featured && 'bg-royal! text-white!']}
+						variant={featured ? 'on-gold' : 'on-blue'}
+						class="col-span-2 sm:col-span-1"
 					>
 						Join <Icon name="external" class="size-4" />
 						<span class="sr-only">{tier.name} on Patreon (opens in a new tab)</span>

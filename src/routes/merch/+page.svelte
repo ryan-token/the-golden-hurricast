@@ -46,7 +46,7 @@
 
 <Seo
 	title="Merch"
-	description="Hurricast t-shirts, hoodies, mugs and stickers, made with Mythic here in Tulsa."
+	description="Hurricast t-shirts, hoodies, mugs, and stickers, made with Mythic here in Tulsa."
 	jsonLd={[
 		...items.map((item) =>
 			productJsonLd({
@@ -64,9 +64,9 @@
 	]}
 />
 
-<PageHeader title="Wear it to Chapman.">
+<PageHeader title="Wear the Hurricast.">
 	{#snippet lead()}
-		The crest on a tee, a hoodie, a mug and a sticker, made with
+		Our logo on a tee, a hoodie, a mug, and a sticker, made with
 		<a href={LINKS.mythic} target="_blank" rel="noopener" class="link">Mythic</a>
 		right here in Tulsa. Shipping is included in every price, and checkout runs securely through Stripe.
 	{/snippet}

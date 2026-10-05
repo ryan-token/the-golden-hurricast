@@ -68,6 +68,6 @@
 			<Icon name={playing ? 'pause' : 'play'} class="size-4" />
 			{playing ? 'Pause' : 'Play episode'}
 		</Button>
-		<ArrowLink href={episodePath(episode.slug)} class="text-white!">Show notes</ArrowLink>
+		<ArrowLink href={episodePath(episode.slug)} class="text-on-chrome">Show notes</ArrowLink>
 	</div>
 </article>

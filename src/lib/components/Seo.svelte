@@ -1,7 +1,6 @@
 <!--
 	@component
-	Per-page `<head>` metadata: title, description, canonical URL, Open Graph and
-	Twitter cards, and optional JSON-LD structured data.
+	Per-page `<head>` metadata: title, description, canonical URL, Open Graph, and Twitter cards, and optional JSON-LD structured data.
 -->
 <script lang="ts">
 	import { page } from '$app/state';

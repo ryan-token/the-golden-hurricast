@@ -1,4 +1,4 @@
-/** Site-wide constants: identity, canonical origin and outbound links. */
+/** Site-wide constants: identity, canonical origin, and outbound links. */
 export const SITE = {
 	name: 'The Golden Hurricast',
 	shortName: 'TGH',
@@ -29,6 +29,8 @@ export const LINKS = {
 	paypal: 'https://paypal.me/thegoldenhurricast',
 	mastodon: 'https://indieweb.social/@ryantoken',
 	mythic: 'https://www.mythic.press/',
+	collegian: 'https://tucollegian.org/',
+	loyalAlwaysTrue: 'https://utulsa.edu/give/giving-opportunities/support/loyal-always-true/',
 	rss: 'https://anchor.fm/s/532d7b4/podcast/rss',
 	email: `mailto:${SITE.email}`
 } as const;
@@ -54,7 +56,7 @@ export const PATREON_TIERS = [
 		price: 5,
 		perks: [
 			'Keeps the show ad-free and independent',
-			'10% goes to the Hurricane Impact NIL collective',
+			'10% goes to TU’s Loyal Always True fund',
 			'Bonus content, like the occasional blog post',
 			'Private Discord with us',
 			'20% off all merch'

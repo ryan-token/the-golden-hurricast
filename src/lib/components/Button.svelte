@@ -3,7 +3,7 @@
 	A button, or a link styled as one when `href` is set.
 -->
 <script lang="ts" module>
-	export type ButtonVariant = 'primary' | 'gold' | 'quiet' | 'on-blue';
+	export type ButtonVariant = 'primary' | 'gold' | 'quiet' | 'on-blue' | 'on-gold';
 	export type ButtonSize = 'sm' | 'md' | 'lg';
 </script>
 
@@ -30,7 +30,9 @@
 			primary: 'bg-accent text-on-accent hover:bg-accent-hover',
 			gold: 'bg-gold text-night hover:bg-gold-light',
 			quiet: 'border border-line-strong bg-surface text-heading hover:border-heading',
-			'on-blue': 'border border-white/35 text-white hover:border-white hover:bg-white/10'
+			'on-blue': 'border border-white/35 text-white hover:border-white hover:bg-white/10',
+			// Stays blue in both themes, for buttons on a gold card.
+			'on-gold': 'bg-royal text-white hover:bg-royal-deep'
 		}[variant],
 		className
 	]);

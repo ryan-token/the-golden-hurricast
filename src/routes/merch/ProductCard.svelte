@@ -1,8 +1,8 @@
 <!--
 	@component
-	One item with its size picker, a quantity stepper and a Buy button. The form posts the chosen
+	One item with its size picker, a quantity stepper, and a Buy button. The form posts the chosen
 	size's product to the page's `checkout` action, which redirects to Stripe — no JavaScript
-	required. With JavaScript, the price, stock note and quantity limit follow the chosen size.
+	required. With JavaScript, the price, stock note, and quantity limit follow the chosen size.
 -->
 <script lang="ts">
 	import Button from '#lib/components/Button.svelte';

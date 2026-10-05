@@ -64,6 +64,12 @@
 	/* The header, footer and player stay blue in both themes. */
 	--color-chrome: light-dark(#003595, #0b1838);
 	--color-chrome-raised: light-dark(#0a3fa5, #15265a);
+	/* The floating player: a shade deeper than the chrome, with a fine edge, so it stands out
+	   over blue bands and the footer. */
+	--color-player: light-dark(#002a78, #15265a);
+	--color-player-edge: light-dark(rgb(208 183 135 / 0.5), rgb(255 255 255 / 0.1));
+	/* Full-width feature bands: royal blue, or the card colour in the dark. Text uses `on-chrome`. */
+	--color-band: light-dark(#003595, #0f1c40);
 	--color-on-chrome: #ffffff;
 	--color-on-chrome-muted: #c9d6f2;
 

@@ -10,7 +10,7 @@ const PAGES = [
 	{ path: '/podcast/episodes/1-1-stay-golden/', h1: 'Stay Golden' },
 	{ path: '/podcast/guests/', h1: 'Everyone who’s pulled up a chair' },
 	{ path: '/blog/', h1: 'Hurc’s Corner' },
-	{ path: '/about/', h1: 'Two alums who never stopped going to games.' },
+	{ path: '/about/', h1: 'Two alums, one time zone away.' },
 	{ path: '/tags/', h1: 'Tags' },
 	{ path: '/tags/football/', h1: 'Posts about football' },
 	{ path: '/tags/golden%20hurristats/', h1: 'Posts about golden hurristats' },

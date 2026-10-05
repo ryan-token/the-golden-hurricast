@@ -25,7 +25,7 @@
 
 <Seo
 	title="Podcast"
-	description="A weekly podcast covering Golden Hurricane athletics at The University of Tulsa, with guests including TU's president, athletic director and head coaches."
+	description="A weekly podcast covering Golden Hurricane athletics at The University of Tulsa, with guests including TU's president, athletic director, and head coaches."
 	jsonLd={[
 		podcastSeries(),
 		breadcrumbs([
@@ -39,15 +39,15 @@
 	<div>
 		<h1 class="display text-d1">The podcast</h1>
 		<p class="mt-5 max-w-2xl text-lead">
-			Since August 2018 we’ve recapped every Tulsa football game, most of basketball season and a
-			good number of things in between. New episodes land every week in season.
+			Since August 2018 we’ve recapped every Tulsa football game, basketball game, and a good number
+			of things in between. New episodes land every week in season.
 		</p>
 		<div class="mt-8 flex flex-wrap gap-3">
 			<AskQuestion />
 			<Button href="/podcast/episodes/" variant="primary" size="lg">
 				Browse all {data.count} episodes
 			</Button>
-			<Button href="/podcast/guests/" variant="quiet" size="lg">See every guest</Button>
+			<Button href="/podcast/guests/" variant="quiet" size="lg">Browse every guest</Button>
 		</div>
 	</div>
 	<nav aria-labelledby="follow">
@@ -59,16 +59,16 @@
 <section
 	aria-labelledby="guests-title"
 	id="guests"
-	class="scroll-mt-16 bg-royal py-16 sm:py-20 dark:bg-chrome"
+	class="scroll-mt-16 bg-band py-16 text-on-chrome sm:py-20"
 >
 	<div class="page">
 		<div class="mb-10 max-w-3xl">
-			<h2 id="guests-title" class="display text-d1 text-white!">
+			<h2 id="guests-title" class="display text-d1 text-on-chrome">
 				The people who run the place have been on the show.
 			</h2>
 			<p class="mt-4 text-lead text-on-chrome-muted">
-				The president, the athletic director and three head coaches, on the record with two fans who
-				still can’t quite believe they said yes.
+				The president, the athletic director, and multiple head coaches, on the record with two fans
+				(us) who still can’t quite believe they said yes.
 			</p>
 		</div>
 		<ul
@@ -92,10 +92,10 @@
 	<div>
 		<h2 id="bench" class="display text-d2">And a deep bench.</h2>
 		<p class="mt-3 text-lead text-muted">
-			Beat writers, former players, the Voice of the Golden Hurricane and a rival-site blogger
-			nearly every game week.
+			Beat writers, former players, the Voice of the Golden Hurricane, and a rival-site
+			blogger/podcaster nearly every game week.
 		</p>
-		<ArrowLink href="/podcast/guests/" class="mt-5">See every guest</ArrowLink>
+		<ArrowLink href="/podcast/guests/" class="mt-5">Browse every guest</ArrowLink>
 	</div>
 	<ul class="grid grid-cols-2 border-t border-line sm:grid-cols-3">
 		{#each BENCH as guest (guest.name)}
@@ -108,7 +108,7 @@
 </section>
 
 <section aria-labelledby="latest" class="page pb-16 sm:pb-20">
-	<SectionHeading id="latest" more={{ href: '/podcast/episodes/', label: 'The full archive' }}>
+	<SectionHeading id="latest" more={{ href: '/podcast/episodes/', label: 'Every episode' }}>
 		Latest episodes
 	</SectionHeading>
 	<ol class="grid gap-3">

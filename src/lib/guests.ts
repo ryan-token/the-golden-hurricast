@@ -1,11 +1,11 @@
 /**
  * Everyone who has been on the show. Appearances are episode codes ("9-1", "3-21b" for a bonus
- * episode) or, for specials without a number, the episode's slug.
+ * episode) or, for specials without a number and the two-part episodes (2-13), the episode's slug.
  */
 export interface Guest {
 	name: string;
 	role?: string;
-	/** Where to find them: an official bio, their outlet or their show. */
+	/** Where to find them: an official bio, their outlet, or their show. */
 	url?: string;
 	appearances: string[];
 }
@@ -61,7 +61,7 @@ export const FEATURED_GUESTS: FeaturedGuest[] = [
 		name: 'Angie Nelp',
 		role: 'Head Women’s Basketball Coach',
 		short: 'Women’s Basketball',
-		bio: 'A native of Eufaula, Oklahoma and a Colorado State graduate. Coach Nelp has twice joined us to talk women’s basketball.',
+		bio: 'A native of Eufaula, Oklahoma, and a Colorado State graduate. Coach Nelp has twice joined us to talk women’s basketball.',
 		bioUrl: 'https://tulsahurricane.com/sports/womens-basketball/roster/coaches/angie-nelp/1685',
 		appearances: ['4-21', '7-9']
 	}
