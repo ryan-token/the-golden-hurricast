@@ -59,7 +59,7 @@
 				class="featured group relative grid grid-cols-[5rem_minmax(0,1fr)] content-start gap-x-4 gap-y-2 rounded-lg border border-line bg-surface p-3 transition-[translate,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-line-strong hover:shadow-lift lg:row-span-3 lg:grid-cols-1 lg:grid-rows-subgrid lg:gap-y-3"
 			>
 				<!-- The wrapper is the grid item: enhanced:img renders a <picture> around the image. -->
-				<div class="row-span-2 overflow-hidden rounded-md bg-sand lg:row-span-1">
+				<div class="row-span-2 self-start overflow-hidden rounded-md bg-sand lg:row-span-1">
 					<enhanced:img
 						src={GUEST_PHOTOS[guest.slug]}
 						alt=""
