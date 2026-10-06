@@ -1,6 +1,7 @@
 # Netlify redirects (copied into the build by @sveltejs/adapter-netlify).
 
 # Redirect domain aliases to the primary domain
+https://goldenhurricast.com/* https://www.thegoldenhurricast.com/:splat 301!
 https://www.goldenhurricast.com/* https://www.thegoldenhurricast.com/:splat 301!
 https://thegoldenhurricast.netlify.com/* https://www.thegoldenhurricast.com/:splat 301!
 

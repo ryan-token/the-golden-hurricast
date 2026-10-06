@@ -13,7 +13,11 @@ const SECURITY_HEADERS = {
 // Domain aliases go to the primary domain. `_redirects` does the same for static files;
 // paths without one reach this function first.
 const PRIMARY_ORIGIN = 'https://www.thegoldenhurricast.com';
-const ALIAS_HOSTS = new Set(['www.goldenhurricast.com', 'thegoldenhurricast.netlify.com']);
+const ALIAS_HOSTS = new Set([
+	'goldenhurricast.com',
+	'www.goldenhurricast.com',
+	'thegoldenhurricast.netlify.com'
+]);
 
 // Retired URLs that still have an equivalent. The Gatsby site's other files (header logo,
 // brand icons, badges, the About photo) were page decoration with no counterpart: they 404.
