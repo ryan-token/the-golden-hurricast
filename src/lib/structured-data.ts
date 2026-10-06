@@ -10,6 +10,15 @@ export type JsonLd = { '@context'?: 'https://schema.org'; '@type': string } & Re
 >;
 
 const ORGANIZATION_ID = `${SITE.url}/#organization`;
+const SERIES_ID = `${SITE.url}/podcast/#series`;
+
+/** An ISO 8601 duration, e.g. `PT1H49M9S`. */
+function isoDuration(seconds: number): string {
+	const h = Math.floor(seconds / 3600);
+	const m = Math.floor((seconds % 3600) / 60);
+	const s = Math.round(seconds % 60);
+	return `PT${h ? `${h}H` : ''}${m ? `${m}M` : ''}${s || (!h && !m) ? `${s}S` : ''}`;
+}
 
 export function organization(): JsonLd {
 	return {
@@ -39,8 +48,10 @@ export function podcastSeries(): JsonLd {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'PodcastSeries',
+		'@id': SERIES_ID,
 		name: SITE.name,
 		description: 'A weekly podcast covering Golden Hurricane athletics at The University of Tulsa.',
+		webFeed: LINKS.rss,
 		url: absoluteUrl('/podcast/'),
 		image: absoluteUrl(SITE.ogImage),
 		author: { '@id': ORGANIZATION_ID },
@@ -111,6 +122,43 @@ export function product(item: {
 				shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'USD' },
 				shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'US' }
 			}
+		}
+	};
+}
+
+export function podcastEpisode(episode: {
+	title: string;
+	description: string;
+	path: string;
+	published: string;
+	/** In seconds. */
+	duration: number;
+	audio: string;
+	season?: number;
+	number?: number;
+}): JsonLd {
+	return {
+		'@context': 'https://schema.org',
+		'@type': 'PodcastEpisode',
+		name: episode.title,
+		description: episode.description,
+		url: absoluteUrl(episode.path),
+		datePublished: episode.published,
+		...(episode.duration > 0 && { duration: isoDuration(episode.duration) }),
+		...(episode.number !== undefined && { episodeNumber: episode.number }),
+		...(episode.season !== undefined && {
+			partOfSeason: { '@type': 'PodcastSeason', seasonNumber: episode.season }
+		}),
+		associatedMedia: {
+			'@type': 'AudioObject',
+			contentUrl: episode.audio,
+			encodingFormat: 'audio/mpeg'
+		},
+		partOfSeries: {
+			'@type': 'PodcastSeries',
+			'@id': SERIES_ID,
+			name: SITE.name,
+			url: absoluteUrl('/podcast/')
 		}
 	};
 }

@@ -20,12 +20,18 @@ export interface StripeProduct {
 	currency: string;
 	/** From the product's `sort_number` metadata; lower sorts first. */
 	sortNumber: number;
+	/** From the product's `group` metadata: sizes of one item share a group, e.g. "Hurricast T-Shirt". */
+	group?: string;
+	/** From the product's `size` metadata, e.g. "XL". */
+	size?: string;
 }
 
 export interface CatalogProduct {
 	id: string;
 	name: string;
 	image?: string;
+	group?: string;
+	size?: string;
 	unitAmount: number;
 	currency: string;
 	available: number;
@@ -43,6 +49,8 @@ export function toStripeProduct(product: Stripe.Product): StripeProduct | undefi
 	if (price.unit_amount === null || price.unit_amount <= 0) return undefined;
 
 	const sortNumber = Number.parseInt(product.metadata.sort_number ?? '', 10);
+	const group = product.metadata.group?.trim();
+	const size = product.metadata.size?.trim();
 	return {
 		id: product.id,
 		name: product.name,
@@ -50,7 +58,9 @@ export function toStripeProduct(product: Stripe.Product): StripeProduct | undefi
 		priceId: price.id,
 		unitAmount: price.unit_amount,
 		currency: price.currency,
-		sortNumber: Number.isNaN(sortNumber) ? Number.MAX_SAFE_INTEGER : sortNumber
+		sortNumber: Number.isNaN(sortNumber) ? Number.MAX_SAFE_INTEGER : sortNumber,
+		...(group && { group }),
+		...(size && { size })
 	};
 }
 
@@ -96,6 +106,8 @@ export async function getCatalog(stripe: Stripe): Promise<CatalogProduct[]> {
 				id: product.id,
 				name: product.name,
 				image: product.image,
+				...(product.group && { group: product.group }),
+				...(product.size && { size: product.size }),
 				unitAmount: product.unitAmount,
 				currency: product.currency,
 				available,

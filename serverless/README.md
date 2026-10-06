@@ -7,7 +7,7 @@ The website calls this API **server to server** (from SvelteKit load functions a
 ## Security
 
 - **Only the website can call the API.** Every route except the Stripe webhook requires the shared site key in `x-api-key` (compared in constant time); everything else gets a 401. The webhook is authenticated by Stripe's signature instead.
-- **Per-visitor rate limits.** The site forwards the visitor's IP in `x-client-ip` (trusted only because the request carries the site key). It's stored only as a keyed hash: 5 questions per 10 minutes, 10 checkout attempts per 30 minutes (each checkout holds stock), 30 order lookups per 10 minutes (each is a Stripe call). An IPv6 /64 counts as one visitor. API Gateway also throttles the whole API.
+- **Per-visitor rate limits.** The site forwards the visitor's IP in `x-client-ip` (trusted only because the request carries the site key). It's stored only as a hash keyed with the site key, so rotating that key resets every limit. Limits use fixed windows: 5 questions per 10 minutes, 10 checkout attempts per 30 minutes (each checkout holds stock), 30 order lookups per 10 minutes (each is a Stripe call). An IPv6 /64 counts as one visitor. Without `x-client-ip` the API falls back to the request's source IP, which is Netlify's server, so every visitor would share one limit. API Gateway also throttles the whole API (25 requests per second, bursts of 50).
 - **User text isn't filtered by character.** Questions and names are Unicode-normalized, stripped of invisible control and bidi-override characters, trimmed and length-limited (`src/lib/text.ts`). Quotes, `<`, `&`, emoji and every language are fine: DynamoDB writes are parameterized, and every output escapes (Svelte on the site, `escapeSlack()` for Slack).
 - **Bots:** the question form has a honeypot field, and SvelteKit's CSRF protection rejects cross-site form posts.
 - **Least privilege:** each Lambda has its own IAM role with only the table actions and SSM parameters it uses. Secrets are read from SSM at runtime.
@@ -24,7 +24,7 @@ POST ?/checkout ──────────────────▶ POST /
                                        + move stock Available → Reserved
                                        (fails if not enough stock: 409)
                                     3. Create Checkout Session ───────────▶ (expires in 31 min)
-◀── 303 to checkout.stripe.com ◀── { url }
+◀── 303 to checkout.stripe.com ◀── 201 { orderId, url }
                                                                            Customer pays
 /merch/success/?session_id=… ─────▶ GET /checkout/sessions/{id} ─┐
                                     POST /stripe/webhook ◀────────┼──────── checkout.session.*
@@ -33,16 +33,17 @@ POST ?/checkout ──────────────────▶ POST /
                                               from Stripe, then one transaction:
                                               RESERVED → PAID     (Reserved → Sold)
                                               RESERVED → EXPIRED  (Reserved → Available)
-                                              RESERVED → PROCESSING → PAID | FAILED
+                                              RESERVED → PROCESSING → PAID
+                                              RESERVED | PROCESSING → FAILED (declined)
 ```
 
 This follows Stripe's [fulfillment](https://docs.stripe.com/checkout/fulfillment) and [limited inventory](https://docs.stripe.com/payments/checkout/managing-limited-inventory) guides:
 
-- **Prices are resolved on the server.** The site sends only a product id and quantity; the charge is the product's Stripe `default_price`.
+- **Prices are resolved on the server.** The site sends only a product id and quantity; the charge is the product's Stripe `default_price`. A checkout is one product, at most 10 units (`MAX_PER_ORDER`), shipped to a US address, with shipping included in the price and promotion codes allowed.
 - **Stock is reserved before checkout**, so two customers can't buy the last item. It's released at once if the customer backs out through Checkout's back link (`POST /checkout/{orderId}/cancel`, called by the site's `/merch/cancel/` route, expires the session), and otherwise when the checkout expires.
 - **Fulfillment is idempotent.** The webhook, the success page and the sweeper all call the same `reconcileCheckoutSession()`, which always re-reads the session from Stripe. Every order change is a DynamoDB transaction conditioned on the order's current status, so retries and concurrent calls can't double-count.
-- **The sweeper is the safety net**: it expires checkouts Stripe left open, catches missed webhooks, and releases reservations whose checkout was never created.
-- **A payment that lands after its reservation was released** is still honored and flagged `oversold` (the Slack message says so).
+- **The sweeper is the safety net**: it expires checkouts Stripe left open, catches missed webhooks, and releases reservations whose checkout was never created (those orders become `CANCELED`, as do orders whose Checkout Session fails to create). It steps in 10 minutes after a session expires, so a checkout abandoned without the back link holds stock for roughly 41 to 51 minutes. It throws if any order fails, so failures show in Lambda's error metrics.
+- **A payment that lands after its reservation was released** is still honored and flagged `oversold`. A session whose line items don't match the order is flagged `line_items_mismatch`. Slack messages show both flags.
 - New questions and paid orders are posted to Slack, each to its own channel, by a DynamoDB-stream consumer (`src/handlers/notify.ts`). It handles records in order and stops at the first failure, so Lambda's retries (up to 5, for records under a day old) never repost messages that already went out.
 
 Customer details (name, address, email) stay in Stripe. The table stores only what's needed to manage stock.
@@ -51,13 +52,14 @@ Customer details (name, address, email) stay in Stripe. The table stores only wh
 
 One table (`hurricast-<stage>`), following Alex DeBrie's _The DynamoDB Book_: generic `PK`/`SK` and `GSI<n>PK`/`GSI<n>SK` keys, a `Type` attribute on every item, application attributes kept separate from indexing attributes, and all DynamoDB access in `src/data/`.
 
-| Entity    | PK                | SK                    | GSI1PK (sparse) | GSI1SK                         | GSI2PK      | GSI2SK      |
-| --------- | ----------------- | --------------------- | --------------- | ------------------------------ | ----------- | ----------- |
-| Inventory | `INVENTORY`       | `PRODUCT#<productId>` |                 |                                |             |             |
-| Order     | `ORDER#<orderId>` | `ORDER#<orderId>`     | `RESERVATION`   | `<releaseAfter ISO>#<orderId>` | `ORDERS`    | `<orderId>` |
-| Question  | `QUESTION#<id>`   | `QUESTION#<id>`       |                 |                                | `QUESTIONS` | `<id>`      |
+| Entity    | PK                             | SK                      | GSI1PK (sparse) | GSI1SK                         | GSI2PK      | GSI2SK      |
+| --------- | ------------------------------ | ----------------------- | --------------- | ------------------------------ | ----------- | ----------- |
+| Inventory | `INVENTORY`                    | `PRODUCT#<productId>`   |                 |                                |             |             |
+| Order     | `ORDER#<orderId>`              | `ORDER#<orderId>`       | `RESERVATION`   | `<releaseAfter ISO>#<orderId>` | `ORDERS`    | `<orderId>` |
+| Question  | `QUESTION#<id>`                | `QUESTION#<id>`         |                 |                                | `QUESTIONS` | `<id>`      |
+| RateLimit | `RATELIMIT#<action>#<subject>` | `WINDOW#<window start>` |                 |                                |             |             |
 
-Order and question ids are [KSUIDs](https://github.com/segmentio/ksuid), so they sort by time.
+Order and question ids are [KSUIDs](https://github.com/segmentio/ksuid), so they sort by time. Rate-limit items expire through the table's TTL on `ExpiresAt`.
 
 | Access pattern                    | How                                                                                |
 | --------------------------------- | ---------------------------------------------------------------------------------- |
@@ -73,15 +75,15 @@ Inventory counters: `Available + Reserved` = units on hand; `Sold` = lifetime sa
 
 ## Code layout
 
-| Path                   | What                                                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `src/handlers/`        | Lambda entry points, one per function in `serverless.yml`. Thin: parse, authenticate, call the domain code. |
-| `src/merch/`           | Catalog, checkout, reconciliation, the sweeper, the Stripe client, and their shared timing (`schedule.ts`). |
-| `src/data/`            | All DynamoDB access: the table and key design (`table.ts`), orders, inventory, questions, rate limits.      |
-| `src/notifications.ts` | Slack message text for paid orders and questions.                                                           |
-| `src/lib/`             | HTTP helpers and errors, site authentication, logging, SSM secrets, Slack, text cleaning, KSUIDs.           |
-| `scripts/`             | Admin and debug scripts (below), and `verify-bundle.ts`.                                                    |
-| `test/`                | Vitest suites, a fake Stripe, and DynamoDB Local setup.                                                     |
+| Path                   | What                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/handlers/`        | Lambda entry points, one per function in `serverless.yml`. Thin: parse, authenticate, call the domain code.                   |
+| `src/merch/`           | Catalog, checkout, reconciliation, the sweeper, the Stripe client, and their shared timing (`schedule.ts`).                   |
+| `src/data/`            | All DynamoDB access: the table and key design (`table.ts`), orders, inventory, questions, rate limits.                        |
+| `src/notifications.ts` | Slack message text for paid orders and questions.                                                                             |
+| `src/lib/`             | HTTP helpers and errors, site authentication, env vars, logging, money formatting, SSM secrets, Slack, text cleaning, KSUIDs. |
+| `scripts/`             | Admin and debug scripts (below), and `verify-bundle.ts`.                                                                      |
+| `test/`                | Vitest suites, a fake Stripe, and DynamoDB Local setup.                                                                       |
 
 Logs are structured JSON: `log.info(msg, fields)`, `log.warn(msg, fields, error?)` and `log.error(msg, fields, error?)` (`src/lib/log.ts`).
 
@@ -97,7 +99,7 @@ npm run verify:bundle  # package the dev stage, then load every built handler li
 
 **Dependencies:** `stripe` and `valibot` are bundled into each function. The AWS SDK (`@aws-sdk/*`) is a devDependency on purpose: Serverless v4 leaves it out of the bundle and the functions use the copy built into Lambda's Node.js 24 runtime; the pinned versions are for type-checking and tests.
 
-AWS credentials come from `AWS_PROFILE=tgh-ryan` and the Serverless Framework key from `SERVERLESS_ACCESS_KEY`, both set by the repo's `.envrc` (direnv).
+Local credentials come from a gitignored `.envrc` at the repo root, loaded by [direnv](https://direnv.net/): it exports `AWS_PROFILE=tgh-ryan` and `AWS_REGION=us-east-2`, and loads `SERVERLESS_ACCESS_KEY` (the Serverless Framework key) from `.env`.
 
 ### Admin and debug scripts
 
@@ -107,11 +109,11 @@ npm run inventory -- --stage prod adjust prod_123 +6         # restock (or -2 af
 npm run inventory -- --stage prod track prod_123 "Name" 10   # sell a new Stripe product
 npm run orders -- --stage prod                               # recent orders
 npm run orders -- --stage prod <orderId>                     # one order in full
-npm run orders -- --stage prod --due                         # orders the sweeper will re-check
+npm run orders -- --stage prod --due                         # every order still holding stock
 npm run questions -- --stage prod                            # recent listener questions
 ```
 
-A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata.
+A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata. Sizes of one item are separate products (each with its own stock) that share a `group` metadata value, the name shown on the site (e.g. `Hurricast T-Shirt`), and each have a `size` (e.g. `XL`): the site shows them as one card with a size picker. The API caches the Stripe catalog for a minute per container, so changes in Stripe take up to a minute to appear. A tracked product without a sellable price is left off the site, with a warning in the logs.
 
 ## Deploying
 
@@ -132,7 +134,9 @@ Secrets live in SSM Parameter Store (SecureString) and are read at runtime, neve
 | `/hurricast/<stage>/slack-orders-webhook-url` | Slack incoming webhook for paid merch orders (#biz)                                                                   |
 | `/hurricast/<stage>/site-api-key`             | Shared key the website sends in `x-api-key` (32+ random characters); the same value is the site's `HURRICAST_API_KEY` |
 
-The Stripe webhook endpoint (an "event destination" in the Dashboard) for each stage points at `<api>/stripe/webhook`, uses the newest stable API version the Dashboard offers (the event's version doesn't matter: the handler reads only the event type and session id, then re-reads the session with the pinned `STRIPE_API_VERSION`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`.
+Secrets are cached for five minutes, except the Stripe key: each Lambda container builds its Stripe client once, so a rotated `stripe-secret-key` only takes effect after a redeploy.
+
+The Stripe webhook endpoint (an "event destination" in the Dashboard) for each stage points at `<api>/stripe/webhook`, is created with the same API version the code pins (`STRIPE_API_VERSION` in `src/merch/stripe.ts`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`. Any version works in practice: the handler reads only the event type and session id, then re-reads the session from Stripe. A bad or missing signature gets a 400, which Stripe doesn't retry; any other failure is a 5xx, which it does.
 
 The table has deletion protection, point-in-time recovery and a `Retain` policy.
 
@@ -141,8 +145,8 @@ The table has deletion protection, point-in-time recovery and a `Retain` policy.
 In this order, so the site never points at an API that isn't ready (`<stage>` is e.g. `prod`):
 
 1. Create the stage's secrets in SSM (SecureString, under `/hurricast/<stage>/`): `stripe-secret-key`, `site-api-key` (32+ random characters), `slack-webhook-url` (questions) and `slack-orders-webhook-url` (orders).
-2. Deploy it (`npm run deploy:<stage>`, adding a script for a new stage), then add a Stripe event destination for `<api>/stripe/webhook` with the four events above, and store its signing secret as `stripe-webhook-secret`.
-3. Track each product's stock: `npm run inventory -- --stage <stage> track <productId> "<name>" <count>`.
+2. Add the stage to `serverless.yml` (`stages.<stage>.params`: `allowedOrigins` and `allowedOriginPattern`) and a `deploy:<stage>` script to `package.json`, then deploy it. Add a Stripe event destination for `<api>/stripe/webhook` with the four events above, and store its signing secret as `stripe-webhook-secret`.
+3. Track each product's stock: `npm run inventory -- --stage <stage> track <productId> "<name>" <count>`. The admin scripts accept only `dev` and `prod`, so add any other stage to `scripts/cli.ts` first.
 4. In Netlify, set `HURRICAST_API_URL` (the stage's API) and `HURRICAST_API_KEY` (its `site-api-key`) for the deploy context that should use it.
 
 The live site moved to this backend on 2026-10-05; the legacy `merch-api` and `questions` services were exported and removed.

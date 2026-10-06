@@ -1,7 +1,9 @@
 <script lang="ts">
-	import Hero from '#lib/components/Hero.svelte';
-	import SectionHeading from '#lib/components/SectionHeading.svelte';
+	import Icon from '#lib/components/Icon.svelte';
+	import PageHeader from '#lib/components/PageHeader.svelte';
 	import Seo from '#lib/components/Seo.svelte';
+	import Sheet from '#lib/components/Sheet.svelte';
+	import { groupProducts } from '#lib/merch.js';
 	import { LINKS } from '#lib/site.js';
 	import { breadcrumbs, product as productJsonLd } from '#lib/structured-data.js';
 	import type { PageProps } from './$types';
@@ -9,27 +11,34 @@
 
 	let { data, form }: PageProps = $props();
 
-	/** The product whose checkout is being started, while the browser heads to Stripe. */
+	const SIZE_CHART = 'size-chart';
+
+	const items = $derived(groupProducts(data.products));
+
+	/** The item whose checkout is being started, while the browser heads to Stripe. */
 	let submitting = $state<string>();
 
-	const TSHIRT_SIZES = {
-		sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
-		rows: [
-			['Body Length From HPS', '28', '29', '30', '31', '32', '33'],
-			['Chest Width (Laid Flat)', '18', '20', '22', '24', '26', '28'],
-			['Sleeve Length', '8 1/4', '8 5/8', '9 1/2', '9 5/8', '10 1/4', '10 7/8']
-		]
-	};
-
-	const HOODIE_SIZES = {
-		sizes: ['M', 'L', 'XL'],
-		rows: [
-			['Across Shoulders', '21 1/2', '23 1/2', '25 1/2'],
-			['Body Length From HPS', '28', '29', '30'],
-			['Chest Width (Laid Flat)', '22', '24', '26'],
-			['Sleeve Length (From Center Back)', '35 1/4', '35 7/8', '36 5/8']
-		]
-	};
+	const CHARTS = [
+		{
+			name: 'T-shirt',
+			sizes: ['S', 'M', 'L', 'XL', '2XL', '3XL'],
+			rows: [
+				['Body length from HPS', '28', '29', '30', '31', '32', '33'],
+				['Chest width, laid flat', '18', '20', '22', '24', '26', '28'],
+				['Sleeve length', '8¼', '8⅝', '9½', '9⅝', '10¼', '10⅞']
+			]
+		},
+		{
+			name: 'Hoodie',
+			sizes: ['M', 'L', 'XL'],
+			rows: [
+				['Across shoulders', '21½', '23½', '25½'],
+				['Body length from HPS', '28', '29', '30'],
+				['Chest width, laid flat', '22', '24', '26'],
+				['Sleeve length from center back', '35¼', '35⅞', '36⅝']
+			]
+		}
+	];
 </script>
 
 <!-- Coming back from Stripe with the back button restores this page from the bfcache. -->
@@ -37,15 +46,15 @@
 
 <Seo
 	title="Merch"
-	description="Hurricast t-shirts, hoodies, mugs and stickers, made with Mythic here in Tulsa."
+	description="T-shirts, hoodies, mugs, and stickers with The Golden Hurricast’s logo, made with Mythic in Tulsa. Shipping is included in every price."
 	jsonLd={[
-		...data.products.map((item) =>
+		...items.map((item) =>
 			productJsonLd({
 				name: item.name,
 				image: item.image,
-				unitAmount: item.unitAmount,
-				currency: item.currency,
-				inStock: item.available > 0
+				unitAmount: Math.min(...item.variants.map((variant) => variant.unitAmount)),
+				currency: item.variants[0].currency,
+				inStock: item.variants.some((variant) => variant.available > 0)
 			})
 		),
 		breadcrumbs([
@@ -55,90 +64,98 @@
 	]}
 />
 
-{#snippet sizeChart(title: string, chart: { sizes: string[]; rows: string[][] })}
-	<div class="overflow-x-auto">
-		<table class="w-full border-collapse border border-line text-center text-sm">
-			<caption class="mb-2 text-left text-base font-medium">{title}</caption>
-			<thead>
-				<tr class="border-b-2 border-ink">
-					<th scope="col" class="p-2">Points of Measurement (inches)</th>
-					{#each chart.sizes as size (size)}
-						<th scope="col" class="p-2">{size}</th>
-					{/each}
-				</tr>
-			</thead>
-			<tbody>
-				{#each chart.rows as [label, ...values] (label)}
-					<tr class="border-b border-line odd:bg-black/5 hover:bg-black/10">
-						<th scope="row" class="border-r border-line p-2 font-normal">{label}</th>
-						{#each values as value, column (column)}
-							<td class="border-r border-line p-2">{value}</td>
-						{/each}
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
-{/snippet}
-
-<Hero title="Hurricast Merch">
+<PageHeader title="Wear the Hurricast.">
 	{#snippet lead()}
-		Love the Hurricast? Love supporting local Tulsa businesses? Just want a shirt with Hurc the
-		Hurricane on it? Buying merchandise from us provides all of this and more.
+		Our logo on a tee, a hoodie, a mug, and a sticker, made with
+		<a href={LINKS.mythic} target="_blank" rel="noopener" class="link">Mythic</a>
+		right here in Tulsa. Shipping is included in every price, and checkout runs securely through Stripe.
 	{/snippet}
-</Hero>
+</PageHeader>
 
-<div class="mx-auto max-w-content px-4 pb-12 sm:px-8">
-	<p class="mb-4">
-		We've teamed up with
-		<a href={LINKS.mythic} target="_blank" rel="noopener noreferrer">Mythic</a>
-		here in Tulsa to design and create the clothing. We use
-		<a href="https://stripe.com/" target="_blank" rel="noopener noreferrer">Stripe</a> to handle payments
-		and orders.
-	</p>
-	<p class="mb-8">
-		The t-shirts and hoodies are unisex. View the <a href="#size-charts">size charts</a> at the bottom
-		of the page for specific item dimensions.
-	</p>
-
-	<section aria-labelledby="products">
-		<SectionHeading id="products">Hurricast Merchandise</SectionHeading>
-
-		{#if data.products.length === 0}
-			<p class="py-8 text-muted">
-				Merch is unavailable right now. Please check back soon, or
-				<a href={LINKS.email}>email us</a>.
-			</p>
-		{:else}
-			<ul class="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2 lg:grid-cols-3">
-				{#each data.products as item, index (item.id)}
-					<li>
-						<ProductCard
-							product={item}
-							useImageCdn={data.useImageCdn}
-							error={form?.productId === item.id ? form.message : undefined}
-							submitting={submitting === item.id}
-							disabled={submitting !== undefined}
-							eager={index < 3}
-							onsubmit={() => (submitting = item.id)}
-						/>
-					</li>
-				{/each}
-			</ul>
-			{#if form && !form.productId}
-				<p role="alert" class="text-danger">{form.message}</p>
-			{/if}
+<section aria-label="Products" class="page pb-16 sm:pb-20">
+	{#if items.length === 0}
+		<p class="rounded-xl border border-line bg-surface p-8 text-lead text-muted">
+			Merch is unavailable right now. Please check back soon, or
+			<a href={LINKS.email} class="link">email us</a>.
+		</p>
+	{:else}
+		<ul class="grid gap-5 md:grid-cols-2">
+			{#each items as item, index (item.key)}
+				{@const ids = item.variants.map((variant) => variant.id)}
+				<li>
+					<ProductCard
+						{item}
+						useImageCdn={data.useImageCdn}
+						error={form?.productId && ids.includes(form.productId) ? form.message : undefined}
+						submitting={submitting === item.key}
+						disabled={submitting !== undefined}
+						eager={index < 2}
+						sizeChart={item.variants.some((variant) => variant.size) ? SIZE_CHART : undefined}
+						onsubmit={() => (submitting = item.key)}
+					/>
+				</li>
+			{/each}
+		</ul>
+		{#if form && !form.productId}
+			<p role="alert" class="mt-5 font-semibold text-alert">{form.message}</p>
 		{/if}
-	</section>
+	{/if}
+</section>
 
-	<section aria-labelledby="size-charts" class="mt-12 space-y-8 border-t border-line pt-8">
-		<div>
-			<h2 id="size-charts" class="mb-2 text-xl">Size Charts</h2>
-			<p class="text-muted">
-				For reference, Ryan is 6′ 1″ and is wearing a <b>large</b> t-shirt and hoodie in the photos
-			</p>
+<Sheet id={SIZE_CHART} labelledby="{SIZE_CHART}-title" width="lg">
+	<div class="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8">
+		<div class="flex items-start justify-between gap-4">
+			<h2 id="{SIZE_CHART}-title" class="display text-d3">Size charts</h2>
+			<button
+				type="button"
+				commandfor={SIZE_CHART}
+				command="close"
+				class="-mt-1 -mr-2 grid size-10 place-items-center rounded-full text-muted hover:bg-sand hover:text-ink"
+			>
+				<span class="sr-only">Close</span>
+				<Icon name="close" />
+			</button>
 		</div>
-		{@render sizeChart('T-Shirt Size Chart', TSHIRT_SIZES)}
-		{@render sizeChart('Hoodie Size Chart', HOODIE_SIZES)}
-	</section>
-</div>
+		<p class="mt-2 text-muted">
+			Unisex fit, in inches. For reference, Ryan is 6′1″ and wears a large in the photos.
+		</p>
+
+		{#each CHARTS as chart (chart.name)}
+			<div class="mt-6 overflow-x-auto">
+				<table class="w-full text-sm">
+					<caption class="mb-2 text-left font-display text-2xl font-extrabold text-heading">
+						{chart.name}
+					</caption>
+					<thead>
+						<tr class="border-b-2 border-heading">
+							<th scope="col" class="py-2 pr-3 text-left font-semibold"
+								><span class="sr-only">Measurement</span></th
+							>
+							{#each chart.sizes as size (size)}
+								<th
+									scope="col"
+									class="px-1 py-2 text-center font-display text-lg font-extrabold sm:px-2"
+									>{size}</th
+								>
+							{/each}
+						</tr>
+					</thead>
+					<tbody>
+						{#each chart.rows as [label, ...values] (label)}
+							<tr class="border-b border-line">
+								<th
+									scope="row"
+									class="py-2.5 pr-2 text-left font-normal text-muted sm:min-w-36 sm:pr-3"
+									>{label}</th
+								>
+								{#each values as value, column (column)}
+									<td class="px-1 py-2.5 text-center font-semibold sm:px-2">{value}</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/each}
+	</div>
+</Sheet>

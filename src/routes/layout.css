@@ -1,121 +1,257 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-/* Design tokens. Every colour, font and size used by the site comes from here. */
-@theme {
-	--font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-
-	--color-ink: #212529;
-	/* Darker than Bootstrap's #6c757d so it passes WCAG AA on the grey hero background. */
-	--color-muted: #5c636a;
-	--color-line: #dee2e6;
-	--color-surface: #e9ecef;
-	--color-navbar: #212529;
-	--color-primary: #0d6efd;
-	--color-primary-hover: #0b5ed7;
-	--color-danger: #dc3545;
-	--color-x: #000000;
-	/* Darker than Bluesky's brand blue so white text on it meets WCAG AA. */
-	--color-bluesky: #0070e0;
-
-	/* Like Bootstrap's responsive font sizes: large headings scale down on small screens. */
-	--text-h1: min(calc(1.375rem + 1.5vw), 2.5rem);
-	--text-h1--line-height: 1.25;
-	--text-h2: min(calc(1.325rem + 0.9vw), 2rem);
-	--text-h2--line-height: 1.25;
-	--text-h3: min(calc(1.3rem + 0.6vw), 1.75rem);
-	--text-h3--line-height: 1.25;
-	--text-h4: min(calc(1.275rem + 0.3vw), 1.5rem);
-	--text-h4--line-height: 1.25;
-
-	/* Width of page bodies. */
-	--container-content: 68rem;
-
-	--shadow-card: 0 5px 15px -7px rgb(0 0 0 / 0.6);
-	--shadow-photo: 0 2px 5px -2px rgb(0 0 0 / 0.6);
+/* `dark:` for the rare style that a light-dark() token can't express. */
+@custom-variant dark {
+	&:where([data-theme='dark'], [data-theme='dark'] *) {
+		@slot;
+	}
+	@media (prefers-color-scheme: dark) {
+		&:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+			@slot;
+		}
+	}
 }
 
-@layer base {
-	html {
-		color-scheme: light;
-	}
-
-	body {
-		/* No `antialiased`: on macOS it renders text noticeably thinner than the old site did. */
-		@apply bg-white font-sans text-base leading-normal text-ink;
-	}
-
-	h1,
-	h2,
-	h3,
-	h4,
-	h5,
-	h6 {
-		@apply leading-tight font-medium;
-	}
-
-	h1 {
-		@apply text-h1;
-	}
-	h2 {
-		@apply text-h2;
-	}
-	h3 {
-		@apply text-h3;
-	}
-	h4 {
-		@apply text-h4;
-	}
-	h5 {
-		@apply text-xl;
-	}
-	h6 {
-		@apply text-base;
-	}
-
-	a {
-		@apply text-primary hover:text-primary-hover;
-	}
-
-	hr {
-		@apply my-4 border-line;
-	}
-
-	/* Selects look the same in every browser: Safari's native control ignores padding and
-	   height. Leave room on the right for the chevron (e.g. `pr-8`). */
-	select:not([multiple]) {
-		appearance: none;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%235c636a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E");
-		background-position: right 0.5rem center;
-		background-repeat: no-repeat;
-		background-size: 0.75rem;
-	}
-
-	:focus-visible {
-		@apply outline-2 outline-offset-2 outline-primary;
-	}
+@font-face {
+	font-family: 'Big Shoulders Display';
+	src: url('../lib/assets/fonts/big-shoulders-display-latin.woff2') format('woff2');
+	font-weight: 700 900;
+	font-display: swap;
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 /*
- * Links are never underlined, anywhere. This is deliberately outside any layer so it
- * outranks everything, including the Typography plugin and `underline` utilities.
- * Colour sets links apart instead: #0d6efd is 3.4:1 against body text (WCAG's 3:1 for
- * links), and keyboard focus gets an outline.
+ * Design tokens. Colours follow TU's 2026 brand guide (royal blue PMS 661, flat gold PMS 7502,
+ * flag red PMS 186). Semantic colours are light-dark() pairs, so components never need `dark:`.
  */
-a {
-	text-decoration-line: none;
+@theme static {
+	--color-*: initial;
+	--color-white: #fff;
+	--color-black: #000;
+	--color-transparent: transparent;
+	--color-current: currentColor;
+
+	--color-royal: #003595;
+	--color-royal-deep: #002a78;
+	--color-gold: #d0b787;
+	--color-gold-light: #dcc79b;
+	--color-red: #ce0e2d;
+	--color-night: #08132e;
+
+	--color-canvas: light-dark(#fbf8f2, #08132e);
+	--color-surface: light-dark(#ffffff, #0f1c40);
+	/* Warm sand in light mode: the home hero and other quiet bands. */
+	--color-sand: light-dark(#f3ecdf, #0c1836);
+	--color-ink: light-dark(#0d1b3e, #edf0f7);
+	--color-heading: light-dark(#003595, #ffffff);
+	--color-muted: light-dark(#5a6178, #a9b4cf);
+	--color-line: light-dark(#e6dfd0, #1e2f5c);
+	--color-line-strong: light-dark(#cdbf9f, #2f4680);
+	/* Fills for primary actions and selected states. Text on them uses `on-accent`. */
+	--color-accent: light-dark(#003595, #d0b787);
+	--color-accent-hover: light-dark(#002a78, #dcc79b);
+	--color-on-accent: light-dark(#ffffff, #08132e);
+	--color-link: light-dark(#003595, #e2cd9f);
+	--color-alert: light-dark(#ce0e2d, #ff8a99);
+	--color-focus: light-dark(#003595, #d0b787);
+	--color-focus-inner: light-dark(#ffffff, #08132e);
+	/* Episode numerals: blue on sand, or gold on blue in the dark. */
+	--color-tile: light-dark(#f3ecdf, #003595);
+	--color-on-tile: light-dark(#003595, #d0b787);
+	/* The header, footer and player stay blue in both themes. */
+	--color-chrome: light-dark(#003595, #0b1838);
+	--color-chrome-raised: light-dark(#0a3fa5, #15265a);
+	/* The floating player: a shade deeper than the chrome, with a fine edge, so it stands out
+	   over blue bands and the footer. */
+	--color-player: light-dark(#002a78, #15265a);
+	--color-player-edge: light-dark(rgb(208 183 135 / 0.5), rgb(255 255 255 / 0.1));
+	/* Full-width feature bands: royal blue, or the card colour in the dark. Text uses `on-chrome`. */
+	--color-band: light-dark(#003595, #0f1c40);
+	--color-on-chrome: #ffffff;
+	--color-on-chrome-muted: #c9d6f2;
+
+	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--font-display: 'Big Shoulders Display', 'Arial Narrow', system-ui, sans-serif;
+
+	--text-hero: clamp(3.25rem, 1.4rem + 6vw, 6.75rem);
+	--text-hero--line-height: 0.92;
+	--text-d1: clamp(2.625rem, 1.6rem + 3.6vw, 4.5rem);
+	--text-d1--line-height: 0.95;
+	--text-d2: clamp(2.125rem, 1.55rem + 2vw, 3.125rem);
+	--text-d2--line-height: 1;
+	--text-d3: clamp(1.625rem, 1.38rem + 0.8vw, 2rem);
+	--text-d3--line-height: 1.05;
+	--text-lead: clamp(1.125rem, 1.06rem + 0.25vw, 1.3125rem);
+	--text-lead--line-height: 1.5;
+
+	--radius-*: initial;
+	--radius-sm: 0.5rem;
+	--radius-md: 0.75rem;
+	--radius-lg: 1rem;
+	--radius-xl: 1.5rem;
+
+	--shadow-*: initial;
+	--shadow-lift: 0 1px 2px rgb(8 19 46 / 0.06), 0 12px 28px -8px rgb(8 19 46 / 0.22);
+	--shadow-float: 0 2px 6px rgb(8 19 46 / 0.12), 0 24px 56px -12px rgb(8 19 46 / 0.4);
+
+	--ease-snappy: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+	--container-page: 75rem;
+
+	--animate-rise: rise 240ms var(--ease-snappy) both;
+	--animate-eq: eq 900ms ease-in-out infinite alternate;
 }
 
-/* Blog posts style text and links like the rest of the site. */
+/* Outside @theme so they're always emitted: page transitions use them too. */
+@keyframes rise {
+	from {
+		opacity: 0;
+		translate: 0 0.5rem;
+	}
+}
+@keyframes eq {
+	from {
+		scale: 1 0.3;
+	}
+}
+@keyframes fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+/* Page width with the side gutter: `<div class="page">`. */
+@utility page {
+	margin-inline: auto;
+	width: 100%;
+	max-width: calc(var(--container-page) + 2 * var(--gutter));
+	padding-inline: var(--gutter);
+}
+
+/* Display headings set in Big Shoulders. Sentence case, never all caps. */
+@utility display {
+	font-family: var(--font-display);
+	font-weight: 800;
+	letter-spacing: -0.005em;
+	color: var(--color-heading);
+	text-wrap: balance;
+}
+
+/* Expands a link over its nearest positioned ancestor, so a whole card is clickable. */
+@utility stretched-link {
+	&::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+}
+
+@layer base {
+	:root {
+		--gutter: clamp(1rem, 4vw, 2.5rem);
+		color-scheme: light dark;
+		scrollbar-gutter: stable;
+		-webkit-tap-highlight-color: transparent;
+	}
+	:root[data-theme='light'] {
+		color-scheme: light;
+	}
+	:root[data-theme='dark'] {
+		color-scheme: dark;
+	}
+
+	body {
+		@apply bg-canvas font-sans text-[1.0625rem] leading-relaxed text-ink antialiased;
+		font-variant-numeric: tabular-nums;
+	}
+
+	a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	/* Two tones, so the ring shows on every background: the page, the blue chrome and gold. */
+	:focus-visible {
+		outline: 2px solid var(--color-focus);
+		outline-offset: 2px;
+		box-shadow: 0 0 0 2px var(--color-focus-inner);
+	}
+
+	::selection {
+		@apply bg-gold text-night;
+	}
+
+	dialog,
+	[popover] {
+		color: inherit;
+	}
+}
+
+/* For an element whose focus is shown by its container instead, e.g. a card's stretched link. */
+@utility focus-ring-none {
+	&:focus-visible {
+		outline: none;
+		box-shadow: none;
+	}
+}
+
+/* Underlined inline links in running text. Nav, buttons and cards don't use this. */
+@utility link {
+	@apply font-semibold text-link underline decoration-current/30 decoration-2 underline-offset-4 transition-[text-decoration-color] hover:decoration-current;
+}
+
+/* Page transitions (started in the root layout). The header and the player stay put. */
+@layer base {
+	::view-transition-old(root) {
+		animation: 120ms ease-out both fade-out;
+	}
+	::view-transition-new(root) {
+		animation: 240ms var(--ease-snappy) 60ms both rise;
+	}
+	::view-transition-group(*) {
+		animation-duration: 260ms;
+		animation-timing-function: var(--ease-snappy);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		::view-transition-group(*),
+		::view-transition-old(*),
+		::view-transition-new(*) {
+			animation: none !important;
+		}
+		*,
+		::before,
+		::after {
+			animation-duration: 1ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 1ms !important;
+		}
+	}
+}
+
+/* Blog posts and episode show notes. */
 .prose {
 	--tw-prose-body: var(--color-ink);
-	--tw-prose-headings: var(--color-ink);
+	--tw-prose-headings: var(--color-heading);
 	--tw-prose-bold: var(--color-ink);
-	--tw-prose-links: var(--color-primary);
+	--tw-prose-links: var(--color-link);
+	--tw-prose-quotes: var(--color-ink);
+	--tw-prose-quote-borders: var(--color-gold);
+	--tw-prose-bullets: var(--color-muted);
+	--tw-prose-counters: var(--color-muted);
+	--tw-prose-hr: var(--color-line);
+	--tw-prose-captions: var(--color-muted);
+	--tw-prose-th-borders: var(--color-line-strong);
+	--tw-prose-td-borders: var(--color-line);
 }
 .prose a {
-	font-weight: inherit;
+	text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+	text-underline-offset: 4px;
 }
 .prose a:hover {
-	color: var(--color-primary-hover);
+	text-decoration-color: currentColor;
 }

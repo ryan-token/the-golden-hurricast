@@ -2,12 +2,15 @@ import { expect, test } from '@playwright/test';
 
 const ORIGIN = 'https://www.thegoldenhurricast.com';
 
+// Pages built from the podcast feed need it to be reachable, as they do in production.
 const PAGES = [
-	{ path: '/', h1: 'The Golden Hurricast' },
-	{ path: '/podcast/', h1: 'The Golden Hurricast' },
-	{ path: '/blog/', h1: 'Our Blog' },
-	{ path: '/about/', h1: 'About Us' },
-	{ path: '/support/', h1: 'Support Us' },
+	{ path: '/', h1: 'Golden Hurricane talk, every week since 2018.' },
+	{ path: '/podcast/', h1: 'The podcast' },
+	{ path: '/podcast/episodes/', h1: 'Every episode' },
+	{ path: '/podcast/episodes/1-1-stay-golden/', h1: 'Stay Golden' },
+	{ path: '/podcast/guests/', h1: 'Every guest we’ve ever had' },
+	{ path: '/blog/', h1: 'Hurc’s Corner' },
+	{ path: '/about/', h1: 'Two alums, one time zone away.' },
 	{ path: '/tags/', h1: 'Tags' },
 	{ path: '/tags/football/', h1: 'Posts about football' },
 	{ path: '/tags/golden%20hurristats/', h1: 'Posts about golden hurristats' },
@@ -33,6 +36,7 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 	for (const [path, location] of [
 		['/merch-success', '/merch/'],
 		['/merch-success/', '/merch/'],
+		['/support/', '/about/#support'],
 		['/patreon.png', '/blog_images/patreon/patreon-tiers.png'],
 		['/apple-touch-icon.webp', '/apple-touch-icon.png'],
 		['/icons/icon-192x192.png?v=25536b73763a79fd4857f010bced2939', '/apple-touch-icon.png']
@@ -41,6 +45,102 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 		expect(response.status(), path).toBe(301);
 		expect(response.headers().location, path).toBe(location);
 	}
+});
+
+test('searching the episode archive filters as you type, keeps the URL in step and survives Back', async ({
+	page
+}) => {
+	const search = page.getByRole('searchbox', { name: 'Search episodes' });
+	const results = page.getByRole('main').getByRole('article');
+	const heading = page.locator('h1');
+	const backToArchive = page.getByRole('main').getByRole('link', { name: 'All episodes' });
+
+	await page.goto('/podcast/episodes/');
+	await search.pressSequentially('stay golden');
+	await expect(search).toHaveValue('stay golden');
+	await expect(page).toHaveURL('/podcast/episodes/?q=stay%20golden');
+	await expect(results).toHaveCount(1);
+
+	// The filtered URL works on its own, without JavaScript's help.
+	await page.reload();
+	await expect(results).toHaveCount(1);
+
+	/** Waits for the page swap to finish (the URL changes first), as a person would. */
+	const expectSearchRestored = async () => {
+		await expect(heading).toHaveText('Every episode');
+		await expect(page).toHaveURL('/podcast/episodes/?q=stay%20golden');
+		await expect(search).toHaveValue('stay golden');
+		await expect(results).toHaveCount(1);
+	};
+	const openResult = async () => {
+		await results.getByRole('link').click();
+		await expect(heading).toHaveText('Stay Golden');
+	};
+
+	// Back from an episode returns to the search, not the whole archive: with the browser's
+	// Back button, the episode page's "All episodes" link, or that link after moving on to
+	// another episode.
+	await openResult();
+	await page.goBack();
+	await expectSearchRestored();
+
+	await openResult();
+	await backToArchive.click();
+	await expectSearchRestored();
+
+	await openResult();
+	await page.getByRole('link', { name: /^Next/ }).click();
+	await expect(heading).not.toHaveText('Stay Golden');
+	await backToArchive.click();
+	await expectSearchRestored();
+});
+
+for (const path of ['/podcast/', '/podcast/guests/']) {
+	test(`${path} opens a headliner's sheet from their card`, async ({ page }) => {
+		await page.goto(path);
+		await page.getByRole('button', { name: 'Tre Lamb' }).click();
+
+		const sheet = page.getByRole('dialog', { name: 'Tre Lamb' });
+		await expect(sheet).toBeVisible();
+		await sheet.getByRole('button', { name: 'Close' }).click();
+		await expect(sheet).toBeHidden();
+	});
+}
+
+for (const path of ['/podcast/', '/about/']) {
+	test(`${path} offers a review on Apple Podcasts or Spotify`, async ({ page }) => {
+		await page.goto(path);
+		await page.getByRole('button', { name: /Leave a 5-star review/ }).click();
+
+		const sheet = page.getByRole('dialog', { name: 'Leave us a 5-star review' });
+		await expect(sheet.getByRole('link', { name: /Apple Podcasts/ })).toHaveAttribute(
+			'href',
+			/id1435008302\?see-all=reviews$/
+		);
+		await expect(sheet.getByRole('link', { name: /Spotify/ })).toHaveAttribute(
+			'href',
+			'https://open.spotify.com/show/16ik0AuBrpVBfWn73jlJio'
+		);
+	});
+}
+
+test('the guests page jumps to a section from its pill', async ({ page }) => {
+	await page.goto('/podcast/guests/');
+	await page
+		.getByRole('navigation', { name: 'Jump to a section' })
+		.getByRole('link', { name: 'Friends of the show' })
+		.click();
+
+	await expect(page).toHaveURL('/podcast/guests/#friends-of-the-show');
+	await expect(
+		page.getByRole('heading', { level: 2, name: 'Friends of the show' })
+	).toBeInViewport();
+});
+
+test('an episode whose title changed redirects to its current page', async ({ request }) => {
+	const response = await request.get('/podcast/episodes/1-1-an-old-title/', { maxRedirects: 0 });
+	expect(response.status()).toBe(301);
+	expect(response.headers().location).toBe('/podcast/episodes/1-1-stay-golden/');
 });
 
 test("Checkout's back link always returns to the merch page, uncached", async ({ request }) => {
@@ -72,16 +172,19 @@ test('the blog lists every post and links to tags', async ({ page }) => {
 	await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(2);
 });
 
-test('the sitemap lists canonical pages, tags and posts', async ({ request }) => {
+test('the sitemap lists canonical pages, episodes, tags and posts', async ({ request }) => {
 	const response = await request.get('/sitemap.xml');
 	const body = await response.text();
 
 	expect(response.status()).toBe(200);
 	expect(body).toContain(`<loc>${ORIGIN}/podcast/</loc>`);
+	expect(body).toContain(
+		`<loc>${ORIGIN}/podcast/episodes/1-1-stay-golden/</loc><lastmod>2018-08-29</lastmod>`
+	);
 	expect(body).toContain(`<loc>${ORIGIN}/tags/golden%20hurristats/</loc>`);
 	expect(body).toContain(`<loc>${ORIGIN}/a-spartan-recap/</loc><lastmod>2019-09-13</lastmod>`);
 	expect(body).not.toContain('question-received');
-	expect(body.match(/<url>/g)).toHaveLength(42);
+	expect(body).not.toContain('/support/');
 });
 
 test.describe('at phone width', () => {
@@ -102,14 +205,42 @@ test.describe('at phone width', () => {
 		await expect(page).toHaveURL('/podcast/');
 		await expect(podcastLink).toBeHidden();
 	});
+});
+
+// The narrowest phones still in use. Long episode titles and links are what tend to push a
+// layout wider than the screen, so the pages with the longest ones are listed.
+test.describe('at the narrowest phone width', () => {
+	test.use({ viewport: { width: 320, height: 640 } });
+
+	const overflow = (element: Element) => element.scrollWidth - element.clientWidth;
 
 	test('pages do not scroll sideways', async ({ page }) => {
-		for (const path of ['/', '/podcast/', '/blog/', '/about/', '/support/', '/tags/']) {
+		for (const path of [
+			'/',
+			'/podcast/',
+			'/podcast/episodes/',
+			'/podcast/episodes/9-6-three-rounds-of-drano/',
+			'/podcast/episodes/7-16-tu-head-football-coach-tre-lamb-joins-the-podcast/',
+			'/podcast/guests/',
+			'/merch/',
+			'/blog/',
+			'/about/',
+			'/tags/'
+		]) {
 			await page.goto(path);
-			const overflow = await page.evaluate(
-				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
-			);
-			expect(overflow, path).toBe(0);
+			expect(await page.locator('html').evaluate(overflow), path).toBe(0);
+		}
+	});
+
+	test('sheets do not scroll sideways', async ({ page }) => {
+		for (const path of ['/podcast/', '/merch/']) {
+			await page.goto(path);
+			for (const sheet of await page.locator('dialog').all()) {
+				await sheet.evaluate((dialog: HTMLDialogElement) => dialog.showModal());
+				const id = await sheet.getAttribute('id');
+				expect(await sheet.evaluate(overflow), `${path} #${id}`).toBe(0);
+				await sheet.evaluate((dialog: HTMLDialogElement) => dialog.close());
+			}
 		}
 	});
 });
