@@ -327,6 +327,7 @@ export const GUEST_GROUPS: GuestGroup[] = [
 			{
 				name: 'The Scott & Holman Pawdcast',
 				role: 'Houston',
+				url: 'https://x.com/SHPawdcast',
 				appearances: ['2-15', '4-7.5', '5-19']
 			},
 			{
@@ -411,6 +412,7 @@ export const GUEST_GROUPS: GuestGroup[] = [
 			{
 				name: 'J.J. Cody-Fox',
 				role: 'Host of J.J.’s No Sports Zone, our bye-week tradition',
+				url: 'https://x.com/vajaysquared',
 				appearances: ['3-4', '5-8', '7-6', '8-11']
 			},
 			{
