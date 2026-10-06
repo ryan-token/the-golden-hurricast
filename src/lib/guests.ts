@@ -236,7 +236,7 @@ export const GUEST_GROUPS: GuestGroup[] = [
 						appearances: ['9-6']
 					},
 					{
-						name: 'Miles',
+						name: 'Miles Meador',
 						role: 'The North Texas Eagle',
 						url: 'https://www.patreon.com/NorthTexasEagle',
 						appearances: ['7-5']
