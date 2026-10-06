@@ -197,8 +197,7 @@
 		<div class="max-w-xl">
 			<h2 id="mailbag" class="display text-d2">The mailbag’s open.</h2>
 			<p class="mt-3 text-lead text-muted">
-				Ask us anything Tulsa: a recruit, a fourth-down call, the best barbecue on the way to
-				Chapman. We read the good ones at the top of the next recap.
+				Ask us anything Tulsa: a recruit, a fourth-down call, whether TU deserves a P4 invite. We'll try to answer it on our next show.
 			</p>
 		</div>
 		<AskQuestion />

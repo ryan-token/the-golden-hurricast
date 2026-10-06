@@ -187,6 +187,12 @@ export const GUEST_GROUPS: GuestGroup[] = [
 				role: 'Formerly of the Tulsa World',
 				url: 'https://x.com/icelation',
 				appearances: ['5-13']
+			},
+			{
+				name: 'Dekota Gregory',
+				role: 'Formerly of the Tulsa World, now with Sooners On SI',
+				url: 'https://dekotagregorywrites.wordpress.com/',
+				appearances: ['2-2']
 			}
 		]
 	},
@@ -436,12 +442,6 @@ export const GUEST_GROUPS: GuestGroup[] = [
 				role: 'Author',
 				url: 'https://www.amazon.com/stores/author/B08CS1XH36',
 				appearances: ['2-14']
-			},
-			{
-				name: 'Dekota Gregory',
-				role: 'Formerly of the Tulsa World, now with Sooners On SI',
-				url: 'https://dekotagregorywrites.wordpress.com/',
-				appearances: ['2-2']
 			}
 		])
 	}
