@@ -15,6 +15,55 @@
 
 	/** Each section's anchor, e.g. "around-the-american". */
 	const anchor = (name: string) => name.toLowerCase().replaceAll(' ', '-');
+
+	/**
+	 * Glides to a section instead of jumping, unless the visitor prefers reduced motion. The link
+	 * stays a plain anchor, so the URL, history, and scroll restoration on Back work as usual: the
+	 * browser jumps, then, before that jump is painted, it's replayed as a short ease-out.
+	 * (CSS smooth scrolling can't be timed, and drags on long jumps.)
+	 */
+	function glide(event: MouseEvent) {
+		const modified =
+			event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+		if (modified || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		const from = scrollY;
+		// The browser's jump arrives as a scroll event, which runs before the frame is painted.
+		// (Firefox jumps a little later than other browsers, so waiting a fixed frame isn't enough.)
+		const replay = () => {
+			clearTimeout(timeout);
+			const distance = scrollY - from;
+			if (Math.abs(distance) < 2) return;
+
+			// Longer jumps take a little longer, within a quarter to just under half a second.
+			const duration = Math.min(450, Math.max(250, Math.abs(distance) / 10));
+			const start = performance.now();
+			let frame = 0;
+			// Scrolling, touching the page, or pressing a key (arrows, Page Down, Space) takes over at once.
+			const stop = () => {
+				cancelAnimationFrame(frame);
+				removeEventListener('wheel', stop);
+				removeEventListener('touchstart', stop);
+				removeEventListener('keydown', stop);
+			};
+			addEventListener('wheel', stop, { passive: true });
+			addEventListener('touchstart', stop, { passive: true });
+			addEventListener('keydown', stop);
+
+			const step = (now: number) => {
+				const t = Math.min(1, (now - start) / duration);
+				const eased = 1 - (1 - t) ** 3;
+				scrollTo({ top: from + distance * eased, behavior: 'instant' });
+				if (t < 1) frame = requestAnimationFrame(step);
+				else stop();
+			};
+			scrollTo({ top: from, behavior: 'instant' });
+			frame = requestAnimationFrame(step);
+		};
+		addEventListener('scroll', replay, { once: true, passive: true });
+		// Already at the section: no jump, so no scroll event to wait for.
+		const timeout = setTimeout(() => removeEventListener('scroll', replay), 500);
+	}
 </script>
 
 <Seo
@@ -91,9 +140,8 @@
 	</ul>
 </section>
 
-<!-- A shortcut to each section below, which is a lot of scrolling on a phone. Plain anchor
-     links: the browser jumps straight there, and `scroll-mt` keeps headings clear of the
-     sticky header. -->
+<!-- A shortcut to each section below, which is a lot of scrolling on a phone. Anchor links
+     that glide there with JavaScript; `scroll-mt` keeps headings clear of the sticky header. -->
 <nav aria-labelledby="sections" class="page pt-10 sm:pt-12">
 	<h2 id="sections" class="mb-3 text-sm font-semibold text-muted">Jump to a section</h2>
 	<ul class="flex flex-wrap gap-2">
@@ -101,6 +149,7 @@
 			<li>
 				<a
 					href="#{anchor(group.name)}"
+					onclick={glide}
 					class="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-4 text-sm font-semibold text-heading transition-colors hover:border-heading"
 				>
 					{group.name}
@@ -114,7 +163,9 @@
 	{#each data.groups as group (group.name)}
 		{@const id = anchor(group.name)}
 		<section aria-labelledby={id}>
-			<h2 {id} class="mb-4 scroll-mt-24 display text-d3">{group.name}</h2>
+			<h2 {id} tabindex="-1" class="mb-4 scroll-mt-24 display text-d3 focus-ring-none">
+				{group.name}
+			</h2>
 			{#each group.sections as section (section.name)}
 				{#if section.name}
 					<h3 class="mt-6 mb-2 text-sm font-semibold text-muted first-of-type:mt-0">
