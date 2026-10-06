@@ -73,6 +73,13 @@ function featured(slug: FeaturedGuest['slug']): Guest {
 	return { name, role, url: bioUrl, appearances };
 }
 
+// One shared collator: far cheaper than `localeCompare` on every comparison, and it ignores
+// case and punctuation ("J.J." sorts as "JJ").
+const byName = new Intl.Collator('en', { sensitivity: 'base', ignorePunctuation: true });
+
+/** Alphabetical by name: a person's first name, or the first word of a show's. Sorted once, when the module loads. */
+const alphabetical = (guests: Guest[]) => guests.toSorted((a, b) => byName.compare(a.name, b.name));
+
 export type GuestGroup = { name: string } & (
 	| { guests: Guest[] }
 	/** Grouped by the school they cover. */
@@ -280,7 +287,7 @@ export const GUEST_GROUPS: GuestGroup[] = [
 	},
 	{
 		name: 'Beyond the American',
-		guests: [
+		guests: alphabetical([
 			{
 				name: 'Matt Jones',
 				role: 'WholeHogSports (Arkansas)',
@@ -306,9 +313,9 @@ export const GUEST_GROUPS: GuestGroup[] = [
 				appearances: ['8-26']
 			},
 			{
-				name: 'Brandon',
+				name: 'Brandon Uhrig',
 				role: 'GoBeercats (Cincinnati)',
-				url: 'https://catskellersocial.club/',
+				url: 'https://catskellersocial.club/gobeercats',
 				appearances: ['4-12', '5-6']
 			},
 			{
@@ -376,11 +383,11 @@ export const GUEST_GROUPS: GuestGroup[] = [
 				url: 'https://podcasts.apple.com/us/podcast/knightline/id897257176',
 				appearances: ['3-6']
 			}
-		]
+		])
 	},
 	{
 		name: 'Friends of the show',
-		guests: [
+		guests: alphabetical([
 			{
 				name: 'Hunter Hart',
 				role: 'Our first-ever guest, and the creator of Reign Cane Sports',
@@ -436,7 +443,7 @@ export const GUEST_GROUPS: GuestGroup[] = [
 				url: 'https://dekotagregorywrites.wordpress.com/',
 				appearances: ['2-2']
 			}
-		]
+		])
 	}
 ];
 
