@@ -64,7 +64,8 @@
 
 			<Button href={guest.bioUrl} target="_blank" rel="noopener" variant="quiet" class="mt-5">
 				<!-- The site name is dropped from sight on the narrowest phones, where it won't fit. -->
-				<span>Official bio<span class="max-[24rem]:sr-only"> on {bioSite}</span></span>
+				<!-- An expression keeps the space: Svelte trims whitespace at the start of an element. -->
+				<span>Official bio<span class="max-[24rem]:sr-only">{` on ${bioSite}`}</span></span>
 				<Icon name="external" class="size-4" />
 				<span class="sr-only">(opens in a new tab)</span>
 			</Button>

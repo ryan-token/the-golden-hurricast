@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { parseFeed, parseTitle, slugify } from './episodes.js';
+import type { Episode } from '#lib/episodes.js';
+import { parseFeed, parseTitle, resolveAppearances, slugify } from './episodes.js';
 
 // Real titles from the feed: each numbering style it has used since 2018.
 describe('parseTitle', () => {
@@ -81,4 +82,20 @@ test('parseFeed builds stable, unique slugs and cleans up show notes', () => {
 		'<p>Hi. We recap <a href="https://example.com" target="_blank" rel="noopener noreferrer">A&#x26;M</a>.</p>' +
 			'<p><button type="button" data-seek="200">3:20</button> - Arkansas Recap</p>'
 	);
+});
+
+test('guest appearances come back newest first, whatever order they are listed in', () => {
+	const episode = (season: number, number: number, published: string) =>
+		({ slug: `${season}-${number}`, season, number, bonus: false, published }) as Episode;
+	const episodes = [
+		episode(8, 10, '2025-10-21'),
+		episode(6, 8, '2023-10-26'),
+		episode(4, 29, '2022-04-15')
+	];
+
+	expect(resolveAppearances(episodes, ['4-29', '8-10', '6-8']).map(({ slug }) => slug)).toEqual([
+		'8-10',
+		'6-8',
+		'4-29'
+	]);
 });

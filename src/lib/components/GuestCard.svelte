@@ -17,7 +17,8 @@
 
 	let { guest, appearances }: Props = $props();
 
-	const first = $derived(appearances[0]);
+	// Appearances are newest first.
+	const first = $derived(appearances.at(-1));
 	const sheetId = $derived(`guest-${guest.slug}`);
 </script>
 

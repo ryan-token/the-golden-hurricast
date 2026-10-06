@@ -305,9 +305,12 @@ export function cacheEpisodePage(setHeaders: (headers: Record<string, string>) =
 	});
 }
 
-/** The episodes a guest appeared on (see `#lib/guests.ts` for the reference format), oldest first. */
+/**
+ * The episodes a guest appeared on (see `#lib/guests.ts` for the reference format), newest
+ * first, whatever order they're listed in.
+ */
 export function resolveAppearances(episodes: Episode[], refs: string[]): Episode[] {
-	return refs.flatMap((ref) => {
+	const found = refs.flatMap((ref) => {
 		const matches = episodes.filter(
 			({ slug, season, number, bonus }) =>
 				ref === slug || ref === `${season}-${number}${bonus ? 'b' : ''}`
@@ -321,4 +324,6 @@ export function resolveAppearances(episodes: Episode[], refs: string[]): Episode
 		}
 		return matches.slice(0, 1);
 	});
+	// ISO dates sort as strings; the sort is stable, so same-day episodes keep their order.
+	return found.toSorted((a, b) => b.published.localeCompare(a.published));
 }

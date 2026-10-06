@@ -124,6 +124,19 @@ for (const path of ['/podcast/', '/about/']) {
 	});
 }
 
+test('the guests page jumps to a section from its pill', async ({ page }) => {
+	await page.goto('/podcast/guests/');
+	await page
+		.getByRole('navigation', { name: 'Jump to a section' })
+		.getByRole('link', { name: 'Friends of the show' })
+		.click();
+
+	await expect(page).toHaveURL('/podcast/guests/#friends-of-the-show');
+	await expect(
+		page.getByRole('heading', { level: 2, name: 'Friends of the show' })
+	).toBeInViewport();
+});
+
 test('an episode whose title changed redirects to its current page', async ({ request }) => {
 	const response = await request.get('/podcast/episodes/1-1-an-old-title/', { maxRedirects: 0 });
 	expect(response.status()).toBe(301);

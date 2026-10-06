@@ -12,6 +12,9 @@
 	let { data }: PageProps = $props();
 
 	type Appearance = Pick<Episode, 'slug' | 'season' | 'number' | 'bonus' | 'title'>;
+
+	/** Each section's anchor, e.g. "around-the-american". */
+	const anchor = (name: string) => name.toLowerCase().replaceAll(' ', '-');
 </script>
 
 <Seo
@@ -88,11 +91,30 @@
 	</ul>
 </section>
 
+<!-- A shortcut to each section below, which is a lot of scrolling on a phone. Plain anchor
+     links: the browser jumps straight there, and `scroll-mt` keeps headings clear of the
+     sticky header. -->
+<nav aria-labelledby="sections" class="page pt-10 sm:pt-12">
+	<h2 id="sections" class="mb-3 text-sm font-semibold text-muted">Jump to a section</h2>
+	<ul class="flex flex-wrap gap-2">
+		{#each data.groups as group (group.name)}
+			<li>
+				<a
+					href="#{anchor(group.name)}"
+					class="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-4 text-sm font-semibold text-heading transition-colors hover:border-heading"
+				>
+					{group.name}
+				</a>
+			</li>
+		{/each}
+	</ul>
+</nav>
+
 <div class="page grid gap-12 py-14 sm:py-16 lg:grid-cols-2 lg:gap-x-16">
 	{#each data.groups as group (group.name)}
-		{@const id = group.name.toLowerCase().replaceAll(' ', '-')}
+		{@const id = anchor(group.name)}
 		<section aria-labelledby={id}>
-			<h2 {id} class="mb-4 display text-d3">{group.name}</h2>
+			<h2 {id} class="mb-4 scroll-mt-24 display text-d3">{group.name}</h2>
 			{#each group.sections as section (section.name)}
 				{#if section.name}
 					<h3 class="mt-6 mb-2 text-sm font-semibold text-muted first-of-type:mt-0">
