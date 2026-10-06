@@ -43,7 +43,10 @@ const sources = import.meta.glob<string>('/src/content/posts/*.md', {
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
-async function parsePost(file: string, source: string): Promise<Post & { sortKey: string }> {
+/** A post's metadata, plus its Markdown body for rendering on demand. */
+type Source = PostSummary & { sortKey: string; body: string };
+
+function parsePost(file: string, source: string): Source {
 	const match = FRONTMATTER.exec(source);
 	if (!match) throw new Error(`${file}: missing frontmatter`);
 
@@ -66,29 +69,29 @@ async function parsePost(file: string, source: string): Promise<Post & { sortKey
 		displayDate: fm.date,
 		published: `${year}-${month}-${day}`,
 		sortKey: fm.sortDate,
-		html: await renderMarkdown(source.slice(match[0].length))
+		body: source.slice(match[0].length)
 	};
 }
 
-let cache: Promise<Post[]> | undefined;
+/** Every post's metadata, newest first. Parsed once. */
+const posts: Source[] = Object.entries(sources)
+	.map(([file, source]) => parsePost(file, source))
+	.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
 
-/** All posts, newest first. Parsed once per build. */
-export function getPosts(): Promise<Post[]> {
-	cache ??= Promise.all(
-		Object.entries(sources).map(([file, source]) => parsePost(file, source))
-	).then((posts) =>
-		posts.sort((a, b) => b.sortKey.localeCompare(a.sortKey)).map(({ sortKey, ...post }) => post)
-	);
-	return cache;
-}
-
-/** Post metadata without the rendered body, for listings. */
+/**
+ * Post metadata without the body, for listings. It never renders Markdown, so it also works in
+ * the server function (the sitemap), where `static/` isn't on disk for reading image sizes.
+ */
 export async function getPostSummaries(): Promise<PostSummary[]> {
-	return (await getPosts()).map(({ html, ...summary }) => summary);
+	return posts.map(({ sortKey, body, ...summary }) => summary);
 }
 
+/** One post, rendered. Only prerendered pages call this: rendering reads image sizes from `static/`. */
 export async function getPost(slug: string): Promise<Post | undefined> {
-	return (await getPosts()).find((post) => post.slug === slug);
+	const source = posts.find((post) => post.slug === slug);
+	if (!source) return undefined;
+	const { sortKey, body, ...summary } = source;
+	return { ...summary, html: await renderMarkdown(body) };
 }
 
 /** Every tag with its posts (newest first), tags sorted alphabetically. */

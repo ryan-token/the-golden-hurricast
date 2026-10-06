@@ -116,7 +116,9 @@ test.describe('without JavaScript', () => {
 
 test.describe('the questions endpoint', () => {
 	// SvelteKit's CSRF protection only accepts form posts from the site's own origin.
-	test.use({ extraHTTPHeaders: { origin: 'http://localhost:4173' } });
+	test.use({
+		extraHTTPHeaders: async ({ baseURL }, use) => use({ origin: new URL(baseURL!).origin })
+	});
 
 	test('rejects an invalid question with JSON', async ({ request }) => {
 		const response = await request.post('/api/questions/', {

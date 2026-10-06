@@ -43,7 +43,9 @@ test('old Gatsby URLs redirect to their replacements', async ({ request }) => {
 	]) {
 		const response = await request.get(path, { maxRedirects: 0 });
 		expect(response.status(), path).toBe(301);
-		expect(response.headers().location, path).toBe(location);
+		// Netlify carries a request's query string over to the redirect, so compare the path.
+		const target = new URL(response.headers().location, response.url());
+		expect(target.pathname + target.hash, path).toBe(location);
 	}
 });
 
