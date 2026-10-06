@@ -55,7 +55,7 @@
 
 <section aria-labelledby="listen" class="border-b border-line">
 	<div class="page flex flex-wrap items-center gap-x-6 gap-y-3 py-6">
-		<h2 id="listen" class="font-semibold text-heading">Free, wherever you already listen</h2>
+		<h2 id="listen" class="font-semibold text-heading">Free, everywhere you already listen</h2>
 		<ul class="flex flex-wrap gap-2">
 			{#each LISTEN_ON as { name, href } (name)}
 				<li>
