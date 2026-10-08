@@ -222,7 +222,7 @@ export const GUEST_GROUPS: GuestGroup[] = [
 						name: 'Mike James',
 						role: 'The Mid Report',
 						url: 'https://www.on3.com/sites/the-mid-report/',
-						appearances: ['4-5.5', '4-11', '5-7', '8-4']
+						appearances: ['4-5.5', '4-11', '5-7', '8-4', '9-7']
 					}
 				]
 			},
