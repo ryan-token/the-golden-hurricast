@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Episode } from '#lib/episodes.js';
 import { parseFeed, parseTitle, resolveAppearances, slugify } from './episodes.js';
 
@@ -98,4 +98,68 @@ test('guest appearances come back newest first, whatever order they are listed i
 		'6-8',
 		'4-29'
 	]);
+});
+
+describe('getEpisodes', () => {
+	// Netlify keeps the function alive for promises passed to waitUntil, and freezes it otherwise.
+	const waitUntil = vi.hoisted(() => vi.fn<(promise: Promise<unknown>) => void>());
+	vi.mock('$app/server', () => ({
+		getRequestEvent: () => ({ platform: { context: { waitUntil } } })
+	}));
+	const settleBackgroundWork = () => Promise.all(waitUntil.mock.calls.map(([promise]) => promise));
+
+	const feed = (title: string) => `<rss><channel><item>
+		<title><![CDATA[${title}]]></title>
+		<description><![CDATA[<p>Notes.</p>]]></description>
+		<pubDate>Fri, 30 Oct 2026 18:57:27 GMT</pubDate>
+		<enclosure url="https://anchor.fm/s/1/podcast/play/2/a.mp3" length="1" type="audio/mpeg"/>
+	</item></channel></rss>`;
+	const serve = (response: () => Response) => {
+		const fetch = vi.fn(async () => response());
+		vi.stubGlobal('fetch', fetch);
+		return fetch;
+	};
+
+	beforeEach(() => {
+		vi.resetModules();
+		waitUntil.mockClear();
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
+	});
+
+	test('once the cache expires, a new episode loads behind a request that gets the old copy', async () => {
+		const { getEpisodes } = await import('./episodes.js');
+		serve(() => new Response(feed('9-9: Old')));
+		await getEpisodes();
+
+		vi.advanceTimersByTime(6 * 60_000);
+		serve(() => new Response(feed('9-10: New')));
+		expect((await getEpisodes())[0].title).toBe('Old');
+		expect(waitUntil).toHaveBeenCalledOnce();
+
+		await settleBackgroundWork();
+		expect((await getEpisodes())[0].title).toBe('New');
+	});
+
+	test('a feed outage keeps serving the last copy, and retries every few minutes rather than every request', async () => {
+		const { getEpisodes } = await import('./episodes.js');
+		serve(() => new Response(feed('9-9: Old')));
+		await getEpisodes();
+
+		vi.advanceTimersByTime(6 * 60_000);
+		const fetch = serve(() => new Response('', { status: 503 }));
+		await getEpisodes();
+		await settleBackgroundWork();
+		expect((await getEpisodes())[0].title).toBe('Old');
+		expect(fetch).toHaveBeenCalledTimes(1);
+
+		vi.advanceTimersByTime(6 * 60_000);
+		await getEpisodes();
+		expect(fetch).toHaveBeenCalledTimes(2);
+	});
 });

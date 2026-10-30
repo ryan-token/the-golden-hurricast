@@ -3,6 +3,7 @@
  * are server-rendered and cached by the CDN (see `cacheEpisodePage`), so a new episode shows up
  * within minutes without a rebuild.
  */
+import { getRequestEvent } from '$app/server';
 import { XMLParser } from 'fast-xml-parser';
 import type { Element, Root } from 'hast';
 import rehypeParse from 'rehype-parse';
@@ -215,7 +216,9 @@ export function parseFeed(xml: string): EpisodeWithNotes[] {
 }
 
 const CACHE_MS = 5 * 60_000;
-let cached: { at: number; episodes: Promise<EpisodeWithNotes[]> } | undefined;
+let cached: { at: number; episodes: EpisodeWithNotes[] } | undefined;
+/** The fetch in flight, shared by every request that arrives while it runs. */
+let loading: Promise<EpisodeWithNotes[]> | undefined;
 
 async function fetchFeed(): Promise<EpisodeWithNotes[]> {
 	// Well inside the function's own time limit, so a hung feed fails before the request does.
@@ -224,33 +227,37 @@ async function fetchFeed(): Promise<EpisodeWithNotes[]> {
 	return parseFeed(await response.text());
 }
 
+function refresh(): Promise<EpisodeWithNotes[]> {
+	loading ??= fetchFeed()
+		.then((episodes) => {
+			cached = { at: Date.now(), episodes };
+			return episodes;
+		})
+		.finally(() => (loading = undefined));
+	return loading;
+}
+
 /**
  * Every episode with its show notes, newest first. Cached for a few minutes per instance; once
  * that's up, requests get the cached copy straight away while a fresh one loads behind them.
  */
 async function loadAll(): Promise<EpisodeWithNotes[]> {
-	if (cached && Date.now() - cached.at < CACHE_MS) return cached.episodes;
+	// The first load has nothing to fall back on. If it fails, the next request tries again.
+	if (!cached) return refresh();
 
-	const stale = cached;
-	const refresh = fetchFeed();
-
-	if (!stale) {
-		cached = { at: Date.now(), episodes: refresh };
-		// Don't hold on to a failure: the next request tries again.
-		refresh.catch(() => {
-			if (cached?.episodes === refresh) cached = undefined;
+	if (!loading && Date.now() - cached.at >= CACHE_MS) {
+		const stale = cached;
+		const background = refresh().catch((error: unknown) => {
+			console.error('Failed to refresh the podcast feed:', error);
+			// Restarting the clock on the stale copy means a feed outage costs one fetch every
+			// few minutes, rather than one per request.
+			if (cached === stale) cached = { ...stale, at: Date.now() };
 		});
-		return refresh;
+		// Netlify freezes the function as soon as it responds. Without this, the fetch never
+		// finishes and the instance serves its first copy for as long as it stays warm.
+		getRequestEvent().platform?.context.waitUntil(background);
 	}
-
-	// Restarting the clock on the stale copy means a feed outage costs one fetch every few
-	// minutes, rather than one per request.
-	cached = { at: Date.now(), episodes: stale.episodes };
-	refresh.then(
-		(episodes) => (cached = { at: Date.now(), episodes: Promise.resolve(episodes) }),
-		(error: unknown) => console.error('Failed to refresh the podcast feed:', error)
-	);
-	return stale.episodes;
+	return cached.episodes;
 }
 
 const withoutNotes = ({ notes, ...episode }: EpisodeWithNotes): Episode => episode;
