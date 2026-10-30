@@ -54,7 +54,7 @@ export const FEATURED_GUESTS: FeaturedGuest[] = [
 		short: 'Men’s Basketball',
 		bio: 'Our most frequent coaching guest. Coach Konkol has been breaking down the men’s basketball program with us since he arrived in 2022.',
 		bioUrl: 'https://tulsahurricane.com/staff-directory/eric-konkol/2458',
-		appearances: ['4-29', '6-8', '7-7', '8-10']
+		appearances: ['4-29', '6-8', '7-7', '8-10', '9-10']
 	},
 	{
 		slug: 'angie-nelp',
@@ -63,7 +63,7 @@ export const FEATURED_GUESTS: FeaturedGuest[] = [
 		short: 'Women’s Basketball',
 		bio: 'A native of Eufaula, Oklahoma, and a Colorado State graduate. Coach Nelp joins us to talk women’s basketball.',
 		bioUrl: 'https://tulsahurricane.com/sports/womens-basketball/roster/coaches/angie-nelp/1685',
-		appearances: ['4-21', '7-9']
+		appearances: ['4-21', '7-9', '9-10']
 	}
 ];
 
