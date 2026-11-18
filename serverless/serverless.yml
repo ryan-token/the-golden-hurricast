@@ -493,7 +493,37 @@ resources:
                 }
               },
               {
-                "type": "metric", "x": 0, "y": 11, "width": 12, "height": 6,
+                "type": "metric", "x": 0, "y": 11, "width": 16, "height": 6,
+                "properties": {
+                  "title": "Requests by endpoint (per 5 minutes)",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stacked": true, "stat": "Sum", "period": 300,
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${ProductsLambdaFunction}", { "label": "GET /products" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CheckoutLambdaFunction}", { "label": "POST /checkout" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CheckoutSessionLambdaFunction}", { "label": "GET /checkout/sessions/{sessionId}" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CancelCheckoutLambdaFunction}", { "label": "POST /checkout/{orderId}/cancel" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${QuestionsLambdaFunction}", { "label": "POST /questions" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${StripeWebhookLambdaFunction}", { "label": "POST /stripe/webhook (from Stripe)" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 16, "y": 11, "width": 8, "height": 6,
+                "properties": {
+                  "title": "Busiest endpoints (whole time range)",
+                  "region": "${AWS::Region}", "view": "bar", "stat": "Sum", "period": 300, "setPeriodToTimeRange": true,
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${ProductsLambdaFunction}", { "label": "GET /products" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CheckoutLambdaFunction}", { "label": "POST /checkout" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CheckoutSessionLambdaFunction}", { "label": "GET /checkout/sessions/{sessionId}" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CancelCheckoutLambdaFunction}", { "label": "POST /checkout/{orderId}/cancel" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${QuestionsLambdaFunction}", { "label": "POST /questions" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${StripeWebhookLambdaFunction}", { "label": "POST /stripe/webhook (from Stripe)" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 0, "y": 17, "width": 12, "height": 6,
                 "properties": {
                   "title": "Store: checkouts and Stripe webhooks",
                   "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
@@ -507,7 +537,7 @@ resources:
                 }
               },
               {
-                "type": "metric", "x": 12, "y": 11, "width": 12, "height": 6,
+                "type": "metric", "x": 12, "y": 17, "width": 12, "height": 6,
                 "properties": {
                   "title": "Background jobs: sweep and Slack notifier",
                   "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 1800,
@@ -520,7 +550,7 @@ resources:
                 }
               },
               {
-                "type": "metric", "x": 0, "y": 17, "width": 12, "height": 6,
+                "type": "metric", "x": 0, "y": 23, "width": 12, "height": 6,
                 "properties": {
                   "title": "Errors by function",
                   "region": "${AWS::Region}", "view": "timeSeries", "stacked": true, "period": 300,
@@ -530,7 +560,7 @@ resources:
                 }
               },
               {
-                "type": "metric", "x": 12, "y": 17, "width": 12, "height": 6,
+                "type": "metric", "x": 12, "y": 23, "width": 12, "height": 6,
                 "properties": {
                   "title": "Database: reads, writes and throttling",
                   "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
