@@ -259,6 +259,295 @@ resources:
         SSESpecification:
           SSEEnabled: true
 
+    # Monitoring is prod-only: dev's traffic is just testing, and its alarms would only be noise.
+    # The address lives in SSM so this public repo never contains it.
+    AlertsTopic:
+      Type: AWS::SNS::Topic
+      Condition: IsProd
+      Properties:
+        TopicName: hurricast-alerts
+        Subscription:
+          - Protocol: email
+            Endpoint: ${ssm:/hurricast/alert-email}
+
+    # A Lambda that throws or times out, or a broken deploy.
+    ApiErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Condition: IsProd
+      Properties:
+        AlarmName: hurricast-api-errors
+        AlarmDescription: >-
+          The Hurricast API returned 2 or more server errors within 5 minutes, so the store or
+          the questions form may be failing. Check the /aws/lambda/hurricast-api-prod-* log groups.
+        Namespace: AWS/ApiGateway
+        MetricName: 5xx
+        Dimensions:
+          - { Name: ApiId, Value: !Ref HttpApi }
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        Threshold: 2
+        TreatMissingData: notBreaching
+        AlarmActions: [!Ref AlertsTopic]
+        OKActions: [!Ref AlertsTopic]
+
+    # Covers what the API alarm cannot see: the Stripe webhook's retries, the sweep, and the
+    # Slack notifier, none of which answer a browser.
+    FunctionErrorsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Condition: IsProd
+      Properties:
+        AlarmName: hurricast-function-errors
+        AlarmDescription: >-
+          A Hurricast function failed in the last 5 minutes. A failing stripeWebhook means paid
+          orders aren't being recorded; a failing notify means Slack isn't hearing about them.
+          Check the /aws/lambda/hurricast-api-prod-* log groups.
+        Metrics:
+          - Id: products
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref ProductsLambdaFunction }
+          - Id: checkout
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref CheckoutLambdaFunction }
+          - Id: session
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref CheckoutSessionLambdaFunction }
+          - Id: cancel
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref CancelCheckoutLambdaFunction }
+          - Id: webhook
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref StripeWebhookLambdaFunction }
+          - Id: questions
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref QuestionsLambdaFunction }
+          - Id: sweep
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref SweepLambdaFunction }
+          - Id: notify
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref NotifyLambdaFunction }
+          - Id: errors
+            Label: Errors across all functions
+            Expression: FILL(products, 0) + FILL(checkout, 0) + FILL(session, 0) + FILL(cancel, 0) + FILL(webhook, 0) + FILL(questions, 0) + FILL(sweep, 0) + FILL(notify, 0)
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        Threshold: 1
+        EvaluationPeriods: 1
+        TreatMissingData: notBreaching
+        AlarmActions: [!Ref AlertsTopic]
+        OKActions: [!Ref AlertsTopic]
+
+    # The sweep runs every 10 minutes; half an hour without a successful run means the schedule
+    # stopped or every run is failing, and abandoned checkouts are no longer being released.
+    SweepMissedAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Condition: IsProd
+      Properties:
+        AlarmName: hurricast-sweep-missed
+        AlarmDescription: No sweep has succeeded in the last 30 minutes.
+        Metrics:
+          - Id: runs
+            ReturnData: false
+            MetricStat:
+              Period: 1800
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Invocations
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref SweepLambdaFunction }
+          - Id: failed
+            ReturnData: false
+            MetricStat:
+              Period: 1800
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref SweepLambdaFunction }
+          - Id: succeeded
+            Label: Successful sweeps
+            Expression: FILL(runs, 0) - FILL(failed, 0)
+        ComparisonOperator: LessThanThreshold
+        Threshold: 1
+        EvaluationPeriods: 1
+        TreatMissingData: breaching
+        AlarmActions: [!Ref AlertsTopic]
+        OKActions: [!Ref AlertsTopic]
+
+    # One page for "is the store healthy?". CloudWatch > Dashboards > hurricast.
+    Dashboard:
+      Type: AWS::CloudWatch::Dashboard
+      Condition: IsProd
+      Properties:
+        DashboardName: hurricast
+        DashboardBody: !Sub |
+          {
+            "start": "-PT24H",
+            "widgets": [
+              {
+                "type": "text", "x": 0, "y": 0, "width": 24, "height": 2,
+                "properties": {
+                  "markdown": "## The Golden Hurricast (prod)\nThe API the website calls for the merch store and the questions form, plus the background jobs: the 10-minute sweep that releases abandoned checkouts and the notifier that posts questions and paid orders to Slack. The alarms below email you when they trip."
+                }
+              },
+              {
+                "type": "alarm", "x": 0, "y": 2, "width": 24, "height": 3,
+                "properties": {
+                  "title": "Alarms",
+                  "alarms": ["${ApiErrorsAlarm.Arn}", "${FunctionErrorsAlarm.Arn}", "${SweepMissedAlarm.Arn}"]
+                }
+              },
+              {
+                "type": "metric", "x": 0, "y": 5, "width": 8, "height": 6,
+                "properties": {
+                  "title": "API requests (per 5 minutes)",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                  "metrics": [
+                    ["AWS/ApiGateway", "Count", "ApiId", "${HttpApi}", { "label": "Requests" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 8, "y": 5, "width": 8, "height": 6,
+                "properties": {
+                  "title": "Successful vs failed requests",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stacked": true, "stat": "Sum", "period": 300,
+                  "metrics": [
+                    ["AWS/ApiGateway", "Count", "ApiId", "${HttpApi}", { "id": "count", "visible": false }],
+                    ["AWS/ApiGateway", "4xx", "ApiId", "${HttpApi}", { "id": "c4", "visible": false }],
+                    ["AWS/ApiGateway", "5xx", "ApiId", "${HttpApi}", { "id": "c5", "visible": false }],
+                    [{ "expression": "FILL(count, 0) - FILL(c4, 0) - FILL(c5, 0)", "label": "Successful", "id": "ok", "color": "#2ca02c" }],
+                    [{ "expression": "FILL(c4, 0)", "label": "Rejected (4xx, e.g. missing site key)", "id": "client", "color": "#ff7f0e" }],
+                    [{ "expression": "FILL(c5, 0)", "label": "Server errors (5xx)", "id": "server", "color": "#d62728" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 16, "y": 5, "width": 8, "height": 6,
+                "properties": {
+                  "title": "API response time (ms)",
+                  "region": "${AWS::Region}", "view": "timeSeries", "period": 300,
+                  "metrics": [
+                    ["AWS/ApiGateway", "Latency", "ApiId", "${HttpApi}", { "stat": "p50", "label": "Typical (p50)" }],
+                    ["AWS/ApiGateway", "Latency", "ApiId", "${HttpApi}", { "stat": "p95", "label": "Slowest 5% (p95)" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 0, "y": 11, "width": 12, "height": 6,
+                "properties": {
+                  "title": "Store: checkouts and Stripe webhooks",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CheckoutLambdaFunction}", { "label": "Checkouts started" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${StripeWebhookLambdaFunction}", { "label": "Stripe webhooks received" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${CancelCheckoutLambdaFunction}", { "label": "Checkouts cancelled" }],
+                    ["AWS/Lambda", "Errors", "FunctionName", "${CheckoutLambdaFunction}", { "label": "Checkout errors", "color": "#d62728" }],
+                    ["AWS/Lambda", "Errors", "FunctionName", "${StripeWebhookLambdaFunction}", { "label": "Webhook errors", "color": "#9467bd" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 12, "y": 11, "width": 12, "height": 6,
+                "properties": {
+                  "title": "Background jobs: sweep and Slack notifier",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 1800,
+                  "metrics": [
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${SweepLambdaFunction}", { "label": "Sweep runs (3 per 30 min expected)" }],
+                    ["AWS/Lambda", "Errors", "FunctionName", "${SweepLambdaFunction}", { "label": "Sweep errors", "color": "#d62728" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${NotifyLambdaFunction}", { "label": "Slack notifications sent" }],
+                    ["AWS/Lambda", "Errors", "FunctionName", "${NotifyLambdaFunction}", { "label": "Notifier errors", "color": "#9467bd" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 0, "y": 17, "width": 12, "height": 6,
+                "properties": {
+                  "title": "Errors by function",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stacked": true, "period": 300,
+                  "metrics": [
+                    [{ "expression": "SEARCH('{AWS/Lambda,FunctionName} MetricName=\"Errors\" \"${self:service}-${sls:stage}\"', 'Sum', 300)", "id": "errors" }]
+                  ]
+                }
+              },
+              {
+                "type": "metric", "x": 12, "y": 17, "width": 12, "height": 6,
+                "properties": {
+                  "title": "Database: reads, writes and throttling",
+                  "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                  "metrics": [
+                    ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${Table}", { "label": "Read units" }],
+                    ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "${Table}", { "label": "Write units" }],
+                    ["AWS/DynamoDB", "ReadThrottleEvents", "TableName", "${Table}", { "label": "Throttled reads", "color": "#d62728", "yAxis": "right" }],
+                    ["AWS/DynamoDB", "WriteThrottleEvents", "TableName", "${Table}", { "label": "Throttled writes", "color": "#9467bd", "yAxis": "right" }]
+                  ]
+                }
+              }
+            ]
+          }
+
+  Conditions:
+    IsProd: !Equals ['${sls:stage}', 'prod']
+
   extensions:
     # Rate-limit the public API (requests/second across all routes).
     HttpApiStage:
