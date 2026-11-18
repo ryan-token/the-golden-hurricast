@@ -475,9 +475,9 @@ resources:
                     ["AWS/ApiGateway", "Count", "ApiId", "${HttpApi}", { "id": "count", "visible": false }],
                     ["AWS/ApiGateway", "4xx", "ApiId", "${HttpApi}", { "id": "c4", "visible": false }],
                     ["AWS/ApiGateway", "5xx", "ApiId", "${HttpApi}", { "id": "c5", "visible": false }],
-                    [{ "expression": "FILL(count, 0) - FILL(c4, 0) - FILL(c5, 0)", "label": "Successful", "id": "ok", "color": "#2ca02c" }],
+                    [{ "expression": "FILL(c5, 0)", "label": "Server errors (5xx)", "id": "server", "color": "#d62728" }],
                     [{ "expression": "FILL(c4, 0)", "label": "Rejected (4xx, e.g. missing site key)", "id": "client", "color": "#ff7f0e" }],
-                    [{ "expression": "FILL(c5, 0)", "label": "Server errors (5xx)", "id": "server", "color": "#d62728" }]
+                    [{ "expression": "FILL(count, 0) - FILL(c4, 0) - FILL(c5, 0)", "label": "Successful", "id": "ok", "color": "#2ca02c" }]
                   ]
                 }
               },
