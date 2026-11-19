@@ -200,6 +200,17 @@ export const GUEST_GROUPS: GuestGroup[] = [
 		name: 'Around the American',
 		schools: [
 			{
+				name: 'Charlotte',
+				guests: [
+					{
+						name: 'Hunter Bailey',
+						role: 'The Highway 49 Podcast',
+						url: 'https://podcasts.apple.com/us/podcast/the-highway-49-podcast/id1611555821',
+						appearances: ['9-12']
+					}
+				]
+			},
+			{
 				name: 'East Carolina',
 				guests: [
 					{
