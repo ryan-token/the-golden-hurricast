@@ -216,13 +216,28 @@ export function parseFeed(xml: string): EpisodeWithNotes[] {
 }
 
 const CACHE_MS = 5 * 60_000;
+/** How long a request waits for a refresh before settling for the stale copy. */
+const REFRESH_WAIT_MS = 2_000;
 let cached: { at: number; episodes: EpisodeWithNotes[] } | undefined;
 /** The fetch in flight, shared by every request that arrives while it runs. */
 let loading: Promise<EpisodeWithNotes[]> | undefined;
+/** A refresh of an expired copy, settled either way: it never rejects. */
+let refreshing: Promise<void> | undefined;
 
 async function fetchFeed(): Promise<EpisodeWithNotes[]> {
 	// Well inside the function's own time limit, so a hung feed fails before the request does.
-	const response = await fetch(LINKS.rss, { signal: AbortSignal.timeout(6_000) });
+	const signal = AbortSignal.timeout(6_000);
+	// The feed's CDN (Fastly) caches it for up to a week and relies on a purge when an episode is
+	// published. Nodes that miss the purge serve the old feed for hours. The feed varies on
+	// Authorization (which the origin ignores), so a value never sent before skips the CDN's
+	// copy. A fixed value wouldn't: Fastly caches it as a copy of its own.
+	const authorization = `Basic ${btoa(`:${crypto.randomUUID()}`)}`;
+	let response = await fetch(LINKS.rss, { headers: { authorization }, signal });
+	// Should the origin ever start checking credentials, the CDN's copy beats no feed at all.
+	if (response.status === 401 || response.status === 403) {
+		await response.body?.cancel();
+		response = await fetch(LINKS.rss, { signal });
+	}
 	if (!response.ok) throw new Error(`Podcast feed responded ${response.status}`);
 	return parseFeed(await response.text());
 }
@@ -239,23 +254,41 @@ function refresh(): Promise<EpisodeWithNotes[]> {
 
 /**
  * Every episode with its show notes, newest first. Cached for a few minutes per instance; once
- * that's up, requests get the cached copy straight away while a fresh one loads behind them.
+ * that's up, requests wait briefly for a fresh copy, and get the old one if the feed is slow.
+ *
+ * Why wait: Netlify's CDN keeps each rendered page for 10 minutes (`cacheEpisodePage`) and
+ * serves its stale page while it re-renders. Answering that re-render with a stale copy from
+ * here would store it for another 10, stacking the two delays.
  */
 async function loadAll(): Promise<EpisodeWithNotes[]> {
 	// The first load has nothing to fall back on. If it fails, the next request tries again.
 	if (!cached) return refresh();
 
-	if (!loading && Date.now() - cached.at >= CACHE_MS) {
+	if (!refreshing && Date.now() - cached.at >= CACHE_MS) {
 		const stale = cached;
-		const background = refresh().catch((error: unknown) => {
-			console.error('Failed to refresh the podcast feed:', error);
-			// Restarting the clock on the stale copy means a feed outage costs one fetch every
-			// few minutes, rather than one per request.
-			if (cached === stale) cached = { ...stale, at: Date.now() };
-		});
-		// Netlify freezes the function as soon as it responds. Without this, the fetch never
-		// finishes and the instance serves its first copy for as long as it stays warm.
-		getRequestEvent().platform?.context.waitUntil(background);
+		refreshing = refresh()
+			.then(
+				() => {},
+				(error: unknown) => {
+					console.error('Failed to refresh the podcast feed:', error);
+					// Restarting the clock on the stale copy means a feed outage costs one fetch
+					// every few minutes, rather than one per request.
+					if (cached === stale) cached = { ...stale, at: Date.now() };
+				}
+			)
+			.finally(() => (refreshing = undefined));
+		// Netlify freezes the function as soon as it responds. Without this, a refresh that
+		// outlasts the wait never finishes, and the instance serves its old copy for as long as
+		// it stays warm.
+		getRequestEvent().platform?.context.waitUntil(refreshing);
+	}
+	if (refreshing) {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		await Promise.race([
+			refreshing,
+			new Promise((resolve) => (timer = setTimeout(resolve, REFRESH_WAIT_MS)))
+		]);
+		clearTimeout(timer);
 	}
 	return cached.episodes;
 }

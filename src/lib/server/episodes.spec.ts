@@ -123,7 +123,7 @@ describe('getEpisodes', () => {
 	beforeEach(() => {
 		vi.resetModules();
 		waitUntil.mockClear();
-		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 	afterEach(() => {
@@ -132,16 +132,48 @@ describe('getEpisodes', () => {
 		vi.restoreAllMocks();
 	});
 
-	test('once the cache expires, a new episode loads behind a request that gets the old copy', async () => {
+	test('every feed fetch sends credentials never sent before, so the CDN can’t answer from a stale copy', async () => {
+		const { getEpisodes } = await import('./episodes.js');
+		const fetch = serve(() => new Response(feed('9-9: Old')));
+		await getEpisodes();
+		vi.advanceTimersByTime(6 * 60_000);
+		await getEpisodes();
+
+		const sent = fetch.mock.calls.map((call) =>
+			new Headers((call as unknown as [string, RequestInit])[1].headers).get('authorization')
+		);
+		expect(sent).toHaveLength(2);
+		expect(sent[0]).toMatch(/^Basic /);
+		expect(sent[0]).not.toBe(sent[1]);
+	});
+
+	test('once the cache expires, the next request gets the new episode', async () => {
 		const { getEpisodes } = await import('./episodes.js');
 		serve(() => new Response(feed('9-9: Old')));
 		await getEpisodes();
 
 		vi.advanceTimersByTime(6 * 60_000);
 		serve(() => new Response(feed('9-10: New')));
-		expect((await getEpisodes())[0].title).toBe('Old');
+		expect((await getEpisodes())[0].title).toBe('New');
+	});
+
+	test('a slow feed gets the old copy, and the new episode loads behind it', async () => {
+		const { getEpisodes } = await import('./episodes.js');
+		serve(() => new Response(feed('9-9: Old')));
+		await getEpisodes();
+
+		vi.advanceTimersByTime(6 * 60_000);
+		let respond!: () => void;
+		vi.stubGlobal(
+			'fetch',
+			() => new Promise((resolve) => (respond = () => resolve(new Response(feed('9-10: New')))))
+		);
+		const request = getEpisodes();
+		await vi.advanceTimersByTimeAsync(2_000);
+		expect((await request)[0].title).toBe('Old');
 		expect(waitUntil).toHaveBeenCalledOnce();
 
+		respond();
 		await settleBackgroundWork();
 		expect((await getEpisodes())[0].title).toBe('New');
 	});
