@@ -55,6 +55,7 @@ AI coding agents should read [`CLAUDE.md`](CLAUDE.md) (also available as `AGENTS
 | `src/lib/guests.ts`                      | Everyone who has been on the show and the episodes they were on. Headliners' official photos are in `src/lib/assets/guests/`.                          |
 | `src/content/posts/`                     | The Hurc's Corner blog archive (2019 to 2024), in Markdown. New writing is on Patreon.                                                                 |
 | `src/routes/layout.css`                  | Tailwind theme: TU brand colors as light and dark pairs, the type scale, and base styles.                                                             |
+| `design/`                                 | Icon Composer source for the home screen icon and favicons. `node design/export-icons.ts` regenerates every icon in `static/` (needs Xcode, pngquant, and oxipng). |
 | `src/lib/assets/`, `static/`             | Images processed at build time by [`@sveltejs/enhanced-img`](https://svelte.dev/docs/kit/images), and files served as they are.                         |
 | `vite.config.ts`                         | SvelteKit config (Kit 3 has no `svelte.config.js`), including the hash-based Content Security Policy.                                                  |
 | `src/hooks.server.ts`                    | Security headers for server-rendered pages, and redirects for old URLs and domain aliases.                                                            |

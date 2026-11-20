@@ -39,7 +39,7 @@
 			title: episode.title,
 			artist: SITE.name,
 			album: episodeLabel(episode),
-			artwork: [{ src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' }]
+			artwork: [{ src: '/maskable-512x512.png', sizes: '512x512', type: 'image/png' }]
 		});
 		const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
 			['play', () => player.audio?.play().catch(() => {})],
