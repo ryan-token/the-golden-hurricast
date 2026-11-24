@@ -16,7 +16,7 @@ import {
 } from '../data/orders.ts';
 import { HttpError } from '../lib/errors.ts';
 import { log } from '../lib/log.ts';
-import { MAX_PER_ORDER, toStripeProduct } from './catalog.ts';
+import { MAX_PER_ORDER, toListing } from './catalog.ts';
 import { reconcileCheckoutSession } from './reconcile.ts';
 import { SWEEP_GRACE_MS } from './schedule.ts';
 import { isMissing } from './stripe.ts';
@@ -46,9 +46,10 @@ export async function createCheckout(
 	}
 
 	// Resolve the product and its price on the server, from Stripe — never trust the client.
+	// The stored listing could be seconds behind a price change, so checkout asks Stripe itself.
 	const product = await stripe.products
 		.retrieve(request.productId, { expand: ['default_price'] })
-		.then(toStripeProduct)
+		.then(toListing)
 		.catch((error: unknown) => {
 			if (isMissing(error)) return undefined;
 			throw error;
@@ -65,7 +66,7 @@ export async function createCheckout(
 			orderId,
 			items: [
 				{
-					productId: product.id,
+					productId: request.productId,
 					priceId: product.priceId,
 					name: product.name,
 					quantity: request.quantity,
@@ -77,7 +78,7 @@ export async function createCheckout(
 		});
 	} catch (error) {
 		if (error instanceof InsufficientStockError) {
-			const available = (await getInventory(product.id))?.available ?? 0;
+			const available = (await getInventory(request.productId))?.available ?? 0;
 			throw new HttpError(
 				409,
 				'insufficient_stock',
@@ -119,7 +120,7 @@ export async function createCheckout(
 	log.info('Checkout started', {
 		orderId,
 		sessionId: session.id,
-		productId: product.id,
+		productId: request.productId,
 		quantity: request.quantity
 	});
 	return { orderId, url: session.url! };

@@ -11,12 +11,18 @@ vi.mock('../src/merch/stripe.ts', async (original) => ({
 	...(await original<typeof import('../src/merch/stripe.ts')>()),
 	getStripe: async () => realStripe
 }));
-vi.mock('../src/lib/secrets.ts', () => ({ getSecret: async () => SECRET }));
+vi.mock('../src/lib/secrets.ts', () => ({
+	getSecret: async () => SECRET,
+	getSecrets: async (names: string[]) => names.map(() => SECRET)
+}));
 const reconcile = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('../src/merch/reconcile.ts', () => ({ reconcileCheckoutSession: reconcile }));
+const syncProduct = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('../src/merch/catalog-sync.ts', () => ({ syncProduct }));
 
 vi.stubEnv('STRIPE_WEBHOOK_SECRET_PARAM', '/test/webhook');
 vi.stubEnv('SITE_API_KEY_PARAM', '/test/site-key');
+vi.stubEnv('STRIPE_SECRET_KEY_PARAM', '/test/stripe-key');
 vi.stubEnv('ALLOWED_ORIGINS', 'https://www.thegoldenhurricast.com');
 vi.stubEnv('ALLOWED_ORIGIN_PATTERN', '^https://[a-z0-9-]+--thegoldenhurricast\\.netlify\\.app$');
 
@@ -36,13 +42,11 @@ function request(body: string, headers: Record<string, string> = {}): APIGateway
 const fromSite = (body: string, ip = '198.51.100.7') =>
 	request(body, { 'x-api-key': SECRET, 'x-client-ip': ip });
 
-function signedEvent(type: string, sessionId = 'cs_test_123') {
-	const payload = JSON.stringify({
-		id: 'evt_1',
-		object: 'event',
-		type,
-		data: { object: { id: sessionId, object: 'checkout.session' } }
-	});
+function signedEvent(
+	type: string,
+	object: Record<string, unknown> = { id: 'cs_test_123', object: 'checkout.session' }
+) {
+	const payload = JSON.stringify({ id: 'evt_1', object: 'event', type, data: { object } });
 	const signature = realStripe.webhooks.generateTestHeaderString({
 		payload,
 		secret: SECRET
@@ -52,12 +56,29 @@ function signedEvent(type: string, sessionId = 'cs_test_123') {
 
 describe('POST /stripe/webhook', async () => {
 	const { handler } = await import('../src/handlers/stripe-webhook.ts');
-	beforeEach(() => reconcile.mockClear());
+	beforeEach(() => {
+		reconcile.mockClear();
+		syncProduct.mockClear();
+	});
 
 	it('reconciles the order for checkout events', async () => {
 		const response = await handler(signedEvent('checkout.session.completed'), context);
 		expect(response.statusCode).toBe(200);
 		expect(reconcile).toHaveBeenCalledWith(realStripe, 'cs_test_123');
+	});
+
+	it('re-syncs the product behind product and price events', async () => {
+		const events = [
+			signedEvent('product.updated', { id: 'prod_mug', object: 'product' }),
+			signedEvent('product.deleted', { id: 'prod_hat', object: 'product' }),
+			signedEvent('price.updated', { id: 'price_1', object: 'price', product: 'prod_shirt' })
+		];
+		for (const event of events) expect((await handler(event, context)).statusCode).toBe(200);
+		expect(syncProduct.mock.calls).toEqual([
+			[realStripe, 'prod_mug'],
+			[realStripe, 'prod_hat'],
+			[realStripe, 'prod_shirt']
+		]);
 	});
 
 	it('rejects a bad signature without doing anything', async () => {

@@ -12,6 +12,19 @@ The website calls this API **server to server** (from SvelteKit load functions a
 - **Bots:** the question form has a honeypot field, and SvelteKit's CSRF protection rejects cross-site form posts.
 - **Least privilege:** each Lambda has its own IAM role with only the table actions and SSM parameters it uses. Secrets are read from SSM at runtime.
 - **Checkout redirects** only go to origins on an allowlist (`allowedOrigins` / `allowedOriginPattern` per stage), and the site only redirects to `checkout.stripe.com`.
+- **The one call back to the site** purges its cached merch page (`POST <siteUrl>/api/merch/purge/`). It carries the same site key in `x-api-key`, and the site checks it in constant time. Purging is all it can do, so the API holds no Netlify credentials. The site's function purges with the token Netlify gives it.
+
+## Merch: the catalog
+
+`GET /products` reads DynamoDB only. It makes one strongly consistent Query that returns every tracked product's listing and stock. Each inventory item holds a copy of the product's Stripe listing (name, photo, default price, `sort_number`, `group` and `size`), kept in step with Stripe by `src/merch/catalog-sync.ts`:
+
+- **Webhooks:** `product.updated`, `product.deleted` and `price.updated` re-sync that one product. Like fulfillment, the sync ignores the event's payload and re-reads the product from Stripe, so late or out-of-order events can't store an old listing.
+- **Hourly full sync** (`syncCatalog`), the safety net for missed webhooks. The deploy scripts also run it after every deploy. It lists every product in one call but doesn't write from that list. A webhook could store a newer listing while the sync works through the products, so any product whose listing looks out of date is re-read on its own before it's written.
+- **`track`** lists a new product as soon as it starts tracking it.
+
+A product that stops being sellable (archived, deleted, or with no active one-time USD default price) loses its listing and drops off the site, with a warning in the logs. Checkout still resolves the price from Stripe itself, since a stored listing can be seconds behind.
+
+The site keeps the rendered merch page in Netlify's shared CDN cache. Whenever an inventory item's `Available` count or `Listing` changes, a DynamoDB stream consumer (`src/handlers/purge-site-cache.ts`) asks the site to purge that cache, once per batch of changes. A sale moving units from `Reserved` to `Sold` changes nothing a visitor sees, so it doesn't purge. The hourly sync only writes listings that changed, so it doesn't purge either. The purger waits 5 seconds (its batching window) before purging. By then, a page render that read the old stock just before the change has already been stored, so the purge clears it too. A failed purge is retried for up to an hour. The page's 5-minute CDN lifetime limits how long a lost purge can go unnoticed. The dev stage has no `siteUrl`, so deploy previews rely on that lifetime alone.
 
 ## Merch: how a purchase works
 
@@ -61,29 +74,31 @@ One table (`hurricast-<stage>`), following Alex DeBrie's _The DynamoDB Book_: ge
 
 Order and question ids are [KSUIDs](https://github.com/segmentio/ksuid), so they sort by time. Rate-limit items expire through the table's TTL on `ExpiresAt`.
 
-| Access pattern                    | How                                                                                |
-| --------------------------------- | ---------------------------------------------------------------------------------- |
-| Stock for every product           | Query `PK = INVENTORY` (strongly consistent)                                       |
-| Reserve stock for a checkout      | Transaction: put order + `Available -= q` if `Available >= q`                      |
-| Get an order                      | GetItem `ORDER#<id>`                                                               |
-| Change an order's status          | Transaction: update order if status unchanged + adjust stock                       |
-| Orders holding stock that are due | Query GSI1 `RESERVATION`, `GSI1SK < now` (sparse: only RESERVED/PROCESSING orders) |
-| Recent orders / questions         | Query GSI2 `ORDERS` / `QUESTIONS`, newest first                                    |
-| Notify Slack                      | Stream with filter: Question inserts, Order → PAID                                 |
+| Access pattern                    | How                                                                                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| Catalog: listings and stock       | Query `PK = INVENTORY` (strongly consistent)                                             |
+| Sync a listing from Stripe        | UpdateItem `SET Listing` / `REMOVE Listing` if the product is tracked                    |
+| Reserve stock for a checkout      | Transaction: put order + `Available -= q` if `Available >= q`                            |
+| Get an order                      | GetItem `ORDER#<id>`                                                                     |
+| Change an order's status          | Transaction: update order if status unchanged + adjust stock                             |
+| Orders holding stock that are due | Query GSI1 `RESERVATION`, `GSI1SK < now` (sparse: only RESERVED/PROCESSING orders)       |
+| Recent orders / questions         | Query GSI2 `ORDERS` / `QUESTIONS`, newest first                                          |
+| Notify Slack                      | Stream with filter: Question inserts, Order → PAID                                       |
+| Purge the site's merch cache      | Stream with filter: `Keys.PK = INVENTORY`, then only if `Available` or `Listing` changed |
 
-Inventory counters: `Available + Reserved` = units on hand; `Sold` = lifetime sales through this system. Conditions can't do arithmetic, so `Available` is stored explicitly.
+Inventory counters: `Available + Reserved` = units on hand; `Sold` = lifetime sales through this system. Conditions can't do arithmetic, so `Available` is stored explicitly. Inventory items also hold `Listing`, a map copied from Stripe. It's absent while the product isn't sellable.
 
 ## Code layout
 
-| Path                   | What                                                                                                                          |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `src/handlers/`        | Lambda entry points, one per function in `serverless.yml`. Thin: parse, authenticate, call the domain code.                   |
-| `src/merch/`           | Catalog, checkout, reconciliation, the sweeper, the Stripe client, and their shared timing (`schedule.ts`).                   |
-| `src/data/`            | All DynamoDB access: the table and key design (`table.ts`), orders, inventory, questions, rate limits.                        |
-| `src/notifications.ts` | Slack message text for paid orders and questions.                                                                             |
-| `src/lib/`             | HTTP helpers and errors, site authentication, env vars, logging, money formatting, SSM secrets, Slack, text cleaning, KSUIDs. |
-| `scripts/`             | Admin and debug scripts (below), and `verify-bundle.ts`.                                                                      |
-| `test/`                | Vitest suites, a fake Stripe, and DynamoDB Local setup.                                                                       |
+| Path                   | What                                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/handlers/`        | Lambda entry points, one per function in `serverless.yml`. Thin: parse, authenticate, call the domain code.                                    |
+| `src/merch/`           | Catalog and its sync from Stripe, checkout, reconciliation, the sweeper, the Stripe client, and their shared timing (`schedule.ts`).           |
+| `src/data/`            | All DynamoDB access: the table and key design (`table.ts`), orders, inventory, questions, rate limits.                                         |
+| `src/notifications.ts` | Slack message text for paid orders and questions.                                                                                              |
+| `src/lib/`             | HTTP helpers and errors, site authentication and cache purges, env vars, logging, money formatting, SSM secrets, Slack, text cleaning, KSUIDs. |
+| `scripts/`             | Admin and debug scripts (below), and `verify-bundle.ts`.                                                                                       |
+| `test/`                | Vitest suites, a fake Stripe, and DynamoDB Local setup.                                                                                        |
 
 Logs are structured JSON: `log.info(msg, fields)`, `log.warn(msg, fields, error?)` and `log.error(msg, fields, error?)` (`src/lib/log.ts`).
 
@@ -107,13 +122,14 @@ Local credentials come from a gitignored `.envrc` at the repo root, loaded by [d
 npm run inventory -- --stage prod                            # stock levels
 npm run inventory -- --stage prod adjust prod_123 +6         # restock (or -2 after a count)
 npm run inventory -- --stage prod track prod_123 "Name" 10   # sell a new Stripe product
+npm run sync-catalog -- --stage prod                         # re-sync every listing from Stripe now
 npm run orders -- --stage prod                               # recent orders
 npm run orders -- --stage prod <orderId>                     # one order in full
 npm run orders -- --stage prod --due                         # every order still holding stock
 npm run questions -- --stage prod                            # recent listener questions
 ```
 
-A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata. Sizes of one item are separate products (each with its own stock) that share a `group` metadata value, the name shown on the site (e.g. `Hurricast T-Shirt`), and each have a `size` (e.g. `XL`): the site shows them as one card with a size picker. The API caches the Stripe catalog for a minute per container, so changes in Stripe take up to a minute to appear. A tracked product without a sellable price is left off the site, with a warning in the logs.
+A new product appears on the site once it's active in Stripe with an active one-time USD default price **and** tracked in inventory. Display order comes from the product's `sort_number` metadata. Sizes of one item are separate products (each with its own stock) that share a `group` metadata value, the name shown on the site (e.g. `Hurricast T-Shirt`), and each have a `size` (e.g. `XL`): the site shows them as one card with a size picker. Changes in Stripe reach the site within seconds through the product webhooks, or within the hour through the full sync. A tracked product without a sellable price is left off the site, with a warning in the logs.
 
 ## Deploying
 
@@ -122,7 +138,9 @@ npm run deploy:dev
 npm run deploy:prod
 ```
 
-Both type-check, lint and test, then package the stage into `.serverless-package/<stage>/` (one zip per function), load every handler from that build (`scripts/verify-bundle.ts`), and deploy exactly that package.
+When a change spans the site and the API, deploy whichever side is called first. For example, the API's purge calls need the site's `/api/merch/purge/` route to exist, so the site went live before the API that calls it. In the other order, every purge gets a 404, retries, and trips the function errors alarm until the site catches up.
+
+Both type-check, lint and test, then package the stage into `.serverless-package/<stage>/` (one zip per function), load every handler from that build (`scripts/verify-bundle.ts`), deploy exactly that package, and then run `syncCatalog` so every listing matches Stripe.
 
 Secrets live in SSM Parameter Store (SecureString) and are read at runtime, never baked into the Lambda configuration:
 
@@ -134,9 +152,9 @@ Secrets live in SSM Parameter Store (SecureString) and are read at runtime, neve
 | `/hurricast/<stage>/slack-orders-webhook-url` | Slack incoming webhook for paid merch orders (#biz)                                                                   |
 | `/hurricast/<stage>/site-api-key`             | Shared key the website sends in `x-api-key` (32+ random characters); the same value is the site's `HURRICAST_API_KEY` |
 
-Secrets are cached for five minutes, except the Stripe key: each Lambda container builds its Stripe client once, so a rotated `stripe-secret-key` only takes effect after a redeploy.
+Secrets are cached for five minutes, except the Stripe key: each Lambda container builds its Stripe client once, so a rotated `stripe-secret-key` only takes effect after a redeploy. A handler's secrets are read in one `GetParameters` call (`siteHandler`'s `secrets` option fetches them with the site key), so a cold start pays for one SSM round trip.
 
-The Stripe webhook endpoint (an "event destination" in the Dashboard) for each stage points at `<api>/stripe/webhook`, is created with the same API version the code pins (`STRIPE_API_VERSION` in `src/merch/stripe.ts`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`. Any version works in practice: the handler reads only the event type and session id, then re-reads the session from Stripe. A bad or missing signature gets a 400, which Stripe doesn't retry; any other failure is a 5xx, which it does.
+The Stripe webhook endpoint (an "event destination" in the Dashboard) for each stage points at `<api>/stripe/webhook`, is created with the same API version the code pins (`STRIPE_API_VERSION` in `src/merch/stripe.ts`), and listens for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `product.updated`, `product.deleted` and `price.updated`. Any version works in practice: the handler reads only the event type and the session or product id, then re-reads that object from Stripe. A bad or missing signature gets a 400, which Stripe doesn't retry; any other failure is a 5xx, which it does.
 
 The table has deletion protection, point-in-time recovery and a `Retain` policy.
 
@@ -145,7 +163,7 @@ The table has deletion protection, point-in-time recovery and a `Retain` policy.
 In this order, so the site never points at an API that isn't ready (`<stage>` is e.g. `prod`):
 
 1. Create the stage's secrets in SSM (SecureString, under `/hurricast/<stage>/`): `stripe-secret-key`, `site-api-key` (32+ random characters), `slack-webhook-url` (questions) and `slack-orders-webhook-url` (orders).
-2. Add the stage to `serverless.yml` (`stages.<stage>.params`: `allowedOrigins` and `allowedOriginPattern`) and a `deploy:<stage>` script to `package.json`, then deploy it. Add a Stripe event destination for `<api>/stripe/webhook` with the four events above, and store its signing secret as `stripe-webhook-secret`.
+2. Add the stage to `serverless.yml` (`stages.<stage>.params`: `allowedOrigins`, `allowedOriginPattern`, and `siteUrl`, the site whose merch cache to purge, or `''`) and a `deploy:<stage>` script to `package.json`, then deploy it. Add a Stripe event destination for `<api>/stripe/webhook` with the seven events above, and store its signing secret as `stripe-webhook-secret`.
 3. Track each product's stock: `npm run inventory -- --stage <stage> track <productId> "<name>" <count>`. The admin scripts accept only `dev` and `prod`, so add any other stage to `scripts/cli.ts` first.
 4. In Netlify, set `HURRICAST_API_URL` (the stage's API) and `HURRICAST_API_KEY` (its `site-api-key`) for the deploy context that should use it.
 

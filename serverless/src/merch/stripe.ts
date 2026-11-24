@@ -15,11 +15,14 @@ export function isMissing(error: unknown): boolean {
 	);
 }
 
+/** The environment variable naming the Stripe key's SSM parameter. */
+export const STRIPE_SECRET_KEY_PARAM = 'STRIPE_SECRET_KEY_PARAM';
+
 let client: Promise<Stripe> | undefined;
 
 /** The Stripe client, created once per Lambda container with the key from SSM. */
 export function getStripe(): Promise<Stripe> {
-	client ??= getSecret(requireEnv('STRIPE_SECRET_KEY_PARAM'))
+	client ??= getSecret(requireEnv(STRIPE_SECRET_KEY_PARAM))
 		.then(
 			(key) =>
 				new Stripe(key, {

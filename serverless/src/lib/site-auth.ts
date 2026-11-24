@@ -10,6 +10,9 @@ import { requireEnv } from './env.ts';
 import { HttpError } from './errors.ts';
 import { getSecret } from './secrets.ts';
 
+/** The environment variable naming the site key's SSM parameter. */
+export const SITE_API_KEY_PARAM = 'SITE_API_KEY_PARAM';
+
 const digest = (value: string) => createHash('sha256').update(value).digest();
 
 /**
@@ -41,7 +44,7 @@ export interface SiteRequest {
 }
 
 export async function authenticateSite(event: APIGatewayProxyEventV2): Promise<SiteRequest> {
-	const key = await getSecret(requireEnv('SITE_API_KEY_PARAM'));
+	const key = await getSecret(requireEnv(SITE_API_KEY_PARAM));
 	const provided = event.headers['x-api-key'] ?? '';
 
 	// Compare fixed-length digests so the check takes the same time whatever was sent.

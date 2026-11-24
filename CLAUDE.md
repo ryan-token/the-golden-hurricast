@@ -21,7 +21,7 @@ SvelteKit 3, Svelte 5 and Tailwind 4 on Netlify, plus an AWS backend in `serverl
 
 - SvelteKit 3 has no `svelte.config.js`. Kit options (adapter, CSP, runes) live in `vite.config.ts`.
 - Import shared code with `#lib/...` (package.json `imports`), not `$lib`.
-- Pages prerender by default (`src/routes/+layout.ts`). Pages built from the podcast RSS feed set `prerender = false` and call `cacheEpisodePage(setHeaders)` so Netlify's CDN caches them. Merch is server-rendered per request for live stock.
+- Pages prerender by default (`src/routes/+layout.ts`). Pages built from the podcast RSS feed set `prerender = false` and call `cacheEpisodePage(setHeaders)` so Netlify's CDN caches them. The merch page is server-rendered and cached with `cacheMerchPage(setHeaders)`. The API purges that cache through `/api/merch/purge/` whenever stock or a listing changes.
 - Episodes come from the RSS feed (`src/lib/server/episodes.ts`), never hard-coded. Guests and their episode codes are hand-kept in `src/lib/guests.ts`.
 - Only server code calls the Hurricast API (`src/lib/server/hurricast-api.ts`), and every response is validated with valibot. Env vars are declared in `src/env.ts` and read from `$app/env/private`.
 - CSP is hash-based. A new external origin for images, audio or form posts must be added to the CSP directives in `vite.config.ts`. The theme script in `src/app.html` is hashed automatically.

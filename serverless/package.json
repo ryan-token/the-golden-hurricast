@@ -12,9 +12,10 @@
 		"check": "tsc --noEmit",
 		"lint": "eslint .",
 		"test": "vitest --run",
-		"deploy:dev": "npm run check && npm run lint && npm test && npm run verify:bundle && scripts/serverless.sh deploy --stage dev --package .serverless-package/dev",
-		"deploy:prod": "npm run check && npm run lint && npm test && scripts/serverless.sh package --stage prod --package .serverless-package/prod && node scripts/verify-bundle.ts .serverless-package/prod && scripts/serverless.sh deploy --stage prod --package .serverless-package/prod",
+		"deploy:dev": "npm run check && npm run lint && npm test && npm run verify:bundle && scripts/serverless.sh deploy --stage dev --package .serverless-package/dev && npm run sync-catalog -- --stage dev",
+		"deploy:prod": "npm run check && npm run lint && npm test && scripts/serverless.sh package --stage prod --package .serverless-package/prod && node scripts/verify-bundle.ts .serverless-package/prod && scripts/serverless.sh deploy --stage prod --package .serverless-package/prod && npm run sync-catalog -- --stage prod",
 		"inventory": "node scripts/inventory.ts",
+		"sync-catalog": "scripts/serverless.sh invoke --function syncCatalog",
 		"orders": "node scripts/orders.ts",
 		"questions": "node scripts/questions.ts",
 		"verify:bundle": "scripts/serverless.sh package --stage dev --package .serverless-package/dev && node scripts/verify-bundle.ts .serverless-package/dev"

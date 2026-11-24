@@ -1,6 +1,10 @@
 /**
  * Inventory: one item per Stripe product we sell, all in the `INVENTORY` partition so the
- * whole catalog's stock is a single strongly consistent Query.
+ * whole catalog (listings and stock) is a single strongly consistent Query.
+ *
+ * `Listing` is a copy of what Stripe says about the product (name, photo, price, sizes),
+ * kept in sync from Stripe's webhooks and an hourly full sync (see merch/catalog-sync.ts),
+ * so listing the catalog never waits on Stripe. It's absent while the product isn't sellable.
  *
  * Counters (`Available + Reserved` = units on hand):
  * - `Available` — can be bought right now
@@ -10,9 +14,26 @@
  * DynamoDB conditions can't do arithmetic, so `Available` is stored explicitly and every
  * write keeps the counters consistent inside a transaction.
  */
+import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import { GetCommand, paginateQuery, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, INVENTORY_PK, keys, tableName } from './table.ts';
 import type { TransactItem } from './table.ts';
+
+/** A sellable product as Stripe describes it. Stripe is the source of truth. */
+export interface Listing {
+	name: string;
+	image?: string;
+	priceId: string;
+	/** In the currency's minor unit (cents). */
+	unitAmount: number;
+	currency: string;
+	/** From the product's `sort_number` metadata; lower sorts first. */
+	sortNumber: number;
+	/** From the product's `group` metadata: sizes of one item share a group, e.g. "Hurricast T-Shirt". */
+	group?: string;
+	/** From the product's `size` metadata, e.g. "XL". */
+	size?: string;
+}
 
 export interface Inventory {
 	productId: string;
@@ -22,6 +43,8 @@ export interface Inventory {
 	reserved: number;
 	sold: number;
 	updatedAt: string;
+	/** Absent while the product isn't sellable (or hasn't been synced from Stripe yet). */
+	listing?: Listing;
 }
 
 function fromItem(item: Record<string, unknown>): Inventory {
@@ -31,7 +54,8 @@ function fromItem(item: Record<string, unknown>): Inventory {
 		available: item.Available as number,
 		reserved: item.Reserved as number,
 		sold: item.Sold as number,
-		updatedAt: item.UpdatedAt as string
+		updatedAt: item.UpdatedAt as string,
+		...(item.Listing !== undefined && { listing: item.Listing as Listing })
 	};
 }
 
@@ -104,6 +128,39 @@ export async function adjustAvailable(productId: string, delta: number): Promise
 		})
 	);
 	return fromItem(result.Attributes!);
+}
+
+/**
+ * Stores the product's listing from Stripe, or removes it when the product isn't sellable.
+ * Returns false (and writes nothing) if the product isn't tracked.
+ *
+ * Leaves `UpdatedAt` alone (it tracks stock), so rewriting an unchanged listing changes
+ * nothing: DynamoDB then emits no stream record, and the site's cache isn't purged.
+ */
+export async function setListing(
+	productId: string,
+	listing: Listing | undefined
+): Promise<boolean> {
+	try {
+		await ddb.send(
+			new UpdateCommand({
+				TableName: tableName(),
+				Key: keys.inventory(productId),
+				...(listing
+					? {
+							UpdateExpression: 'SET Listing = :listing, #name = :name',
+							ExpressionAttributeNames: { '#name': 'Name' },
+							ExpressionAttributeValues: { ':listing': listing, ':name': listing.name }
+						}
+					: { UpdateExpression: 'REMOVE Listing' }),
+				ConditionExpression: 'attribute_exists(PK)'
+			})
+		);
+		return true;
+	} catch (error) {
+		if (error instanceof ConditionalCheckFailedException) return false;
+		throw error;
+	}
 }
 
 // ---------------------------------------------------------------------------------------

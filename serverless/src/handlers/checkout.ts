@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import { MAX_PER_ORDER } from '../merch/catalog.ts';
 import { createCheckout } from '../merch/checkout.ts';
-import { getStripe } from '../merch/stripe.ts';
+import { getStripe, STRIPE_SECRET_KEY_PARAM } from '../merch/stripe.ts';
 import { requireEnv } from '../lib/env.ts';
 import { consumeRateLimit } from '../data/rate-limits.ts';
 import { HttpError } from '../lib/errors.ts';
@@ -30,21 +30,25 @@ function assertAllowedOrigin(origin: string) {
 }
 
 /** POST /checkout — reserve stock and create a Stripe Checkout Session. */
-export const handler = siteHandler(async (event, { clientId }) => {
-	const body = parseJsonBody(event, CheckoutBody);
-	assertAllowedOrigin(body.origin);
+export const handler = siteHandler(
+	async (event, { clientId }) => {
+		const body = parseJsonBody(event, CheckoutBody);
+		assertAllowedOrigin(body.origin);
 
-	// Each checkout holds stock for half an hour, so cap how much one visitor can hold.
-	assertWithinRateLimit(
-		await consumeRateLimit({
-			action: 'checkout',
-			subject: clientId,
-			limit: 10,
-			windowSeconds: 1800
-		}),
-		'Too many checkout attempts. Please try again later.'
-	);
+		// Each checkout holds stock for half an hour, so cap how much one visitor can hold.
+		assertWithinRateLimit(
+			await consumeRateLimit({
+				action: 'checkout',
+				subject: clientId,
+				limit: 10,
+				windowSeconds: 1800
+			}),
+			'Too many checkout attempts. Please try again later.'
+		);
 
-	const result = await createCheckout(await getStripe(), body);
-	return json(201, result);
-});
+		const result = await createCheckout(await getStripe(), body);
+		return json(201, result);
+	},
+	// Read with the site key in one SSM call.
+	{ secrets: [STRIPE_SECRET_KEY_PARAM] }
+);

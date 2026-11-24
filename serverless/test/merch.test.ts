@@ -5,7 +5,8 @@ import { createInventory, getInventory } from '../src/data/inventory.ts';
 import { getOrder, listOrders } from '../src/data/orders.ts';
 import { ddb } from '../src/data/table.ts';
 import { HttpError } from '../src/lib/errors.ts';
-import { clearCatalogCache, getCatalog, MAX_PER_ORDER } from '../src/merch/catalog.ts';
+import { getCatalog, MAX_PER_ORDER } from '../src/merch/catalog.ts';
+import { syncCatalog, syncProduct } from '../src/merch/catalog-sync.ts';
 import { cancelCheckout, createCheckout } from '../src/merch/checkout.ts';
 import { reconcileCheckoutSession } from '../src/merch/reconcile.ts';
 import { sweepReservations } from '../src/merch/sweep.ts';
@@ -32,7 +33,6 @@ let stripe: FakeStripe;
 
 beforeEach(async () => {
 	table = await createTestTable();
-	clearCatalogCache();
 	stripe = new FakeStripe([SHIRT, MUG]);
 	await createInventory({ productId: SHIRT.id, name: SHIRT.name, available: 3 });
 	await createInventory({ productId: MUG.id, name: MUG.name, available: 20 });
@@ -81,10 +81,9 @@ describe('catalog', () => {
 		});
 		stripe.catalog.set('prod_noprice', { id: 'prod_noprice', name: 'No price' });
 		await createInventory({ productId: 'prod_noprice', name: 'No price', available: 5 });
+		await syncCatalog(stripe.client);
 
-		const catalog = await getCatalog(stripe.client);
-
-		expect(catalog).toEqual([
+		expect(await getCatalog()).toEqual([
 			{
 				id: SHIRT.id,
 				name: SHIRT.name,
@@ -98,6 +97,81 @@ describe('catalog', () => {
 			},
 			expect.objectContaining({ id: MUG.id, available: 20, maxQuantity: MAX_PER_ORDER })
 		]);
+	});
+
+	it('shows stock as it changes, without asking Stripe again', async () => {
+		await syncCatalog(stripe.client);
+		const list = vi.spyOn(stripe.products, 'list');
+		await checkout(2);
+
+		expect(await getCatalog()).toContainEqual(
+			expect.objectContaining({ id: SHIRT.id, available: 1, maxQuantity: 1 })
+		);
+		expect(list).not.toHaveBeenCalled();
+	});
+
+	it('unlists products that are archived or lose their price, and lists them again', async () => {
+		await syncCatalog(stripe.client);
+		stripe.catalog.set(MUG.id, { ...MUG, active: false });
+		stripe.catalog.set(SHIRT.id, { ...SHIRT, price: { ...SHIRT.price, active: false } });
+
+		expect(await syncCatalog(stripe.client)).toEqual({ listed: 0, unlisted: 2 });
+		expect(await getCatalog()).toEqual([]);
+
+		stripe.catalog.set(MUG.id, MUG);
+		await syncCatalog(stripe.client);
+		expect((await getCatalog()).map(({ id }) => id)).toEqual([MUG.id]);
+	});
+	it('never writes back a listing a webhook replaced while the sync was running', async () => {
+		await syncCatalog(stripe.client);
+		// The sync lists every product, then a price change lands and its webhook runs…
+		const listed = stripe.products.list();
+		stripe.catalog.set(MUG.id, { ...MUG, price: { id: 'price_mug2', unitAmount: 2500 } });
+		await syncProduct(stripe.client, MUG.id);
+
+		// …before the sync gets to that product.
+		vi.spyOn(stripe.products, 'list').mockReturnValue(listed);
+		await syncCatalog(stripe.client);
+		expect(await getCatalog()).toContainEqual(
+			expect.objectContaining({ id: MUG.id, unitAmount: 2500 })
+		);
+	});
+});
+
+describe('syncProduct', () => {
+	beforeEach(() => syncCatalog(stripe.client));
+
+	it('picks up a new price, name or sort order from Stripe', async () => {
+		stripe.catalog.set(MUG.id, {
+			...MUG,
+			name: 'Hurricast Travel Mug',
+			sortNumber: 1,
+			price: { id: 'price_mug2', unitAmount: 2500 }
+		});
+		await syncProduct(stripe.client, MUG.id);
+
+		expect((await getCatalog())[0]).toMatchObject({
+			id: MUG.id,
+			name: 'Hurricast Travel Mug',
+			unitAmount: 2500
+		});
+		expect((await getInventory(MUG.id))!.name).toBe('Hurricast Travel Mug');
+	});
+
+	it('unlists a product deleted in Stripe', async () => {
+		stripe.catalog.delete(MUG.id);
+		await syncProduct(stripe.client, MUG.id);
+		expect((await getCatalog()).map(({ id }) => id)).toEqual([SHIRT.id]);
+	});
+
+	it('ignores products we do not track', async () => {
+		stripe.catalog.set('prod_other', {
+			id: 'prod_other',
+			name: 'Someone else’s',
+			price: { id: 'price_o', unitAmount: 100 }
+		});
+		await syncProduct(stripe.client, 'prod_other');
+		expect(await getInventory('prod_other')).toBeUndefined();
 	});
 });
 

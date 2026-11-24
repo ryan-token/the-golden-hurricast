@@ -2,9 +2,10 @@ import { fail, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ApiError, createCheckout, describeError, getCatalog } from '#lib/server/hurricast-api.js';
 import type { Product } from '#lib/server/hurricast-api.js';
+import { cacheMerchPage } from '#lib/server/merch-cache.js';
 import type { Actions, PageServerLoad } from './$types';
 
-// Rendered per request so prices and stock are live; the CDN may serve it for a few seconds.
+// Rendered on demand so prices and stock are live; the CDN keeps it until they change.
 export const prerender = false;
 
 export const load: PageServerLoad = async ({ setHeaders, platform }) => {
@@ -21,11 +22,7 @@ export const load: PageServerLoad = async ({ setHeaders, platform }) => {
 		return { products: [], useImageCdn };
 	}
 
-	setHeaders({
-		'cache-control': 'public, max-age=0, must-revalidate',
-		// Netlify's CDN: serve from cache for 30s, then refresh in the background.
-		'netlify-cdn-cache-control': 'public, s-maxage=30, stale-while-revalidate=120'
-	});
+	cacheMerchPage(setHeaders);
 
 	return { products, useImageCdn };
 };

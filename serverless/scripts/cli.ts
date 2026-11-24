@@ -5,7 +5,10 @@ import { formatMoney } from '../src/lib/money.ts';
 
 export type Stage = 'dev' | 'prod';
 
-/** Parses `--stage dev|prod` (required) plus any script-specific options, and targets that stage's table. */
+/**
+ * Parses `--stage dev|prod` (required) plus any script-specific options, and targets that
+ * stage's table and Stripe account.
+ */
 export function parseCli<T extends ParseArgsOptionsConfig>(options: T) {
 	const { values, positionals } = parseArgs({
 		options: { ...options, stage: { type: 'string' } },
@@ -17,6 +20,7 @@ export function parseCli<T extends ParseArgsOptionsConfig>(options: T) {
 		process.exit(1);
 	}
 	process.env.TABLE_NAME = `hurricast-${stage}`;
+	process.env.STRIPE_SECRET_KEY_PARAM = `/hurricast/${stage}/stripe-secret-key`;
 	process.env.AWS_REGION ??= 'us-east-2';
 	return { stage: stage as Stage, values, positionals };
 }

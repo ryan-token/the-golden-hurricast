@@ -43,7 +43,7 @@ AI coding agents should read [`CLAUDE.md`](CLAUDE.md) (also available as `AGENTS
 
 ## How it works
 
-**Rendering.** Most pages are prerendered to static HTML at build time. Pages built from the podcast's RSS feed (`/`, everything under `/podcast/`, and `/sitemap.xml`) are server-rendered and cached by Netlify's CDN for ten minutes, so a new episode appears within minutes without a rebuild. The merch pages, the question endpoint (`/api/questions/`), and `/question-received/` are rendered per request. All server rendering runs in one Netlify Function, which also handles 404s and redirects from old URLs.
+**Rendering.** Most pages are prerendered to static HTML at build time. Pages built from the podcast's RSS feed (`/`, everything under `/podcast/`, and `/sitemap.xml`) are server-rendered and cached by Netlify's CDN for ten minutes, so a new episode appears within minutes without a rebuild. The merch page is server-rendered and kept in Netlify's shared CDN cache. The Hurricast API calls `/api/merch/purge/` whenever stock or a listing changes, so the cached page stays current. The rest of the merch flow, the question endpoint (`/api/questions/`), and `/question-received/` are rendered per request. All server rendering runs in one Netlify Function, which also handles 404s and redirects from old URLs.
 
 **The API.** The site calls the Hurricast API only from the server (`src/lib/server/hurricast-api.ts`), never from browsers, and validates every response.
 

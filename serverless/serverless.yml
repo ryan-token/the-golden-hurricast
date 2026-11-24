@@ -45,11 +45,16 @@ stages:
     params:
       allowedOrigins: https://www.thegoldenhurricast.com
       allowedOriginPattern: ''
+      # The site whose cached merch pages are purged when stock or listings change.
+      siteUrl: https://www.thegoldenhurricast.com
   dev:
     params:
       allowedOrigins: http://localhost:5173,http://localhost:4173
       # Netlify deploy previews and branch deploys.
       allowedOriginPattern: '^https://[a-z0-9-]+--thegoldenhurricast\.netlify\.app$'
+      # Nothing to purge: localhost has no CDN, and deploy previews fall back to the merch
+      # page's short CDN lifetime.
+      siteUrl: ''
 
 custom:
   tableName: hurricast-${sls:stage}
@@ -57,12 +62,16 @@ custom:
   iam:
     stripeKey:
       Effect: Allow
-      Action: ssm:GetParameter
+      Action: ssm:GetParameters
       Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/stripe-secret-key
     siteKey:
       Effect: Allow
-      Action: ssm:GetParameter
+      Action: ssm:GetParameters
       Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/site-api-key
+    listingWrite:
+      Effect: Allow
+      Action: dynamodb:UpdateItem
+      Resource: !GetAtt Table.Arn
     orderReadWrite:
       Effect: Allow
       Action: [dynamodb:GetItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
@@ -90,7 +99,6 @@ functions:
       role:
         statements:
           - ${self:custom.iam.siteKey}
-          - ${self:custom.iam.stripeKey}
           - Effect: Allow
             Action: dynamodb:Query
             Resource: !GetAtt Table.Arn
@@ -146,8 +154,9 @@ functions:
         statements:
           - ${self:custom.iam.stripeKey}
           - ${self:custom.iam.orderReadWrite}
+          - ${self:custom.iam.listingWrite}
           - Effect: Allow
-            Action: ssm:GetParameter
+            Action: ssm:GetParameters
             Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/stripe-webhook-secret
 
   questions:
@@ -176,6 +185,21 @@ functions:
             Action: dynamodb:Query
             Resource: !Sub '${Table.Arn}/index/GSI1'
 
+  # The safety net behind the product webhooks. The deploy scripts also run it after deploying.
+  syncCatalog:
+    handler: src/handlers/sync-catalog.handler
+    timeout: 60
+    events:
+      - schedule: rate(1 hour)
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.stripeKey}
+          - ${self:custom.iam.listingWrite}
+          - Effect: Allow
+            Action: dynamodb:Query
+            Resource: !GetAtt Table.Arn
+
   notify:
     handler: src/handlers/notify.handler
     # A batch stops at its first failure, but give slow Slack responses (10s each) room.
@@ -187,7 +211,7 @@ functions:
       role:
         statements:
           - Effect: Allow
-            Action: ssm:GetParameter
+            Action: ssm:GetParameters
             Resource:
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/slack-webhook-url
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/hurricast/${sls:stage}/slack-orders-webhook-url
@@ -217,6 +241,36 @@ functions:
                 OldImage:
                   Status:
                     S: [{ anything-but: [PAID] }]
+
+  # The table stream's second (and last unthrottled) consumer, after notify.
+  purgeSiteCache:
+    handler: src/handlers/purge-site-cache.handler
+    environment:
+      SITE_URL: ${param:siteUrl}
+    iam:
+      role:
+        statements:
+          - ${self:custom.iam.siteKey}
+    events:
+      - stream:
+          type: dynamodb
+          arn: !GetAtt Table.StreamArn
+          startingPosition: LATEST
+          batchSize: 100
+          # Wait a few seconds before purging, so a page render that read the old stock just
+          # before the change is already stored, and gets purged too. Changes close together
+          # then share one purge.
+          batchWindow: 5
+          # A purge is idempotent and one covers a whole batch, so retry the batch as a unit,
+          # and give up on changes old enough that the CDN copy has expired anyway.
+          maximumRetryAttempts: 10
+          maximumRecordAgeInSeconds: 3600
+          filterPatterns:
+            # Inventory items; REMOVE records have no NewImage, but every record has Keys.
+            - dynamodb:
+                Keys:
+                  PK:
+                    S: [INVENTORY]
 
 resources:
   Resources:
@@ -292,8 +346,8 @@ resources:
         AlarmActions: [!Ref AlertsTopic]
         OKActions: [!Ref AlertsTopic]
 
-    # Covers what the API alarm cannot see: the Stripe webhook's retries, the sweep, and the
-    # Slack notifier, none of which answer a browser.
+    # Covers what the API alarm cannot see: the Stripe webhook's retries, the sweep, the
+    # catalog sync, the Slack notifier and the site cache purger, none of which answer a browser.
     FunctionErrorsAlarm:
       Type: AWS::CloudWatch::Alarm
       Condition: IsProd
@@ -301,7 +355,8 @@ resources:
         AlarmName: hurricast-function-errors
         AlarmDescription: >-
           A Hurricast function failed in the last 5 minutes. A failing stripeWebhook means paid
-          orders aren't being recorded; a failing notify means Slack isn't hearing about them.
+          orders aren't being recorded; a failing notify means Slack isn't hearing about them;
+          a failing syncCatalog or purgeSiteCache means the merch page may show old listings or stock.
           Check the /aws/lambda/hurricast-api-prod-* log groups.
         Metrics:
           - Id: products
@@ -384,9 +439,29 @@ resources:
                 MetricName: Errors
                 Dimensions:
                   - { Name: FunctionName, Value: !Ref NotifyLambdaFunction }
+          - Id: sync
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref SyncCatalogLambdaFunction }
+          - Id: purge
+            ReturnData: false
+            MetricStat:
+              Period: 300
+              Stat: Sum
+              Metric:
+                Namespace: AWS/Lambda
+                MetricName: Errors
+                Dimensions:
+                  - { Name: FunctionName, Value: !Ref PurgeSiteCacheLambdaFunction }
           - Id: errors
             Label: Errors across all functions
-            Expression: FILL(products, 0) + FILL(checkout, 0) + FILL(session, 0) + FILL(cancel, 0) + FILL(webhook, 0) + FILL(questions, 0) + FILL(sweep, 0) + FILL(notify, 0)
+            Expression: FILL(products, 0) + FILL(checkout, 0) + FILL(session, 0) + FILL(cancel, 0) + FILL(webhook, 0) + FILL(questions, 0) + FILL(sweep, 0) + FILL(notify, 0) + FILL(sync, 0) + FILL(purge, 0)
         ComparisonOperator: GreaterThanOrEqualToThreshold
         Threshold: 1
         EvaluationPeriods: 1
@@ -446,7 +521,7 @@ resources:
               {
                 "type": "text", "x": 0, "y": 0, "width": 24, "height": 2,
                 "properties": {
-                  "markdown": "## The Golden Hurricast (prod)\nThe API the website calls for the merch store and the questions form, plus the background jobs: the 10-minute sweep that releases abandoned checkouts and the notifier that posts questions and paid orders to Slack. The alarms below email you when they trip."
+                  "markdown": "## The Golden Hurricast (prod)\nThe API the website calls for the merch store and the questions form, plus the background jobs: the 10-minute sweep that releases abandoned checkouts, the hourly catalog sync from Stripe, the notifier that posts questions and paid orders to Slack, and the purger that refreshes the site's cached merch page when stock changes. The alarms below email you when they trip."
                 }
               },
               {
@@ -539,13 +614,17 @@ resources:
               {
                 "type": "metric", "x": 12, "y": 17, "width": 12, "height": 6,
                 "properties": {
-                  "title": "Background jobs: sweep and Slack notifier",
+                  "title": "Background jobs",
                   "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 1800,
                   "metrics": [
                     ["AWS/Lambda", "Invocations", "FunctionName", "${SweepLambdaFunction}", { "label": "Sweep runs (3 per 30 min expected)" }],
                     ["AWS/Lambda", "Errors", "FunctionName", "${SweepLambdaFunction}", { "label": "Sweep errors", "color": "#d62728" }],
                     ["AWS/Lambda", "Invocations", "FunctionName", "${NotifyLambdaFunction}", { "label": "Slack notifications sent" }],
-                    ["AWS/Lambda", "Errors", "FunctionName", "${NotifyLambdaFunction}", { "label": "Notifier errors", "color": "#9467bd" }]
+                    ["AWS/Lambda", "Errors", "FunctionName", "${NotifyLambdaFunction}", { "label": "Notifier errors", "color": "#9467bd" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${SyncCatalogLambdaFunction}", { "label": "Catalog syncs (1 per hour expected)" }],
+                    ["AWS/Lambda", "Errors", "FunctionName", "${SyncCatalogLambdaFunction}", { "label": "Catalog sync errors", "color": "#8c564b" }],
+                    ["AWS/Lambda", "Invocations", "FunctionName", "${PurgeSiteCacheLambdaFunction}", { "label": "Purger runs (stock or listing changes)" }],
+                    ["AWS/Lambda", "Errors", "FunctionName", "${PurgeSiteCacheLambdaFunction}", { "label": "Purge errors", "color": "#e377c2" }]
                   ]
                 }
               },

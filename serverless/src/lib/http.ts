@@ -6,7 +6,9 @@ import type {
 import * as v from 'valibot';
 import { HttpError } from './errors.ts';
 import { log } from './log.ts';
-import { authenticateSite } from './site-auth.ts';
+import { requireEnv } from './env.ts';
+import { getSecrets } from './secrets.ts';
+import { authenticateSite, SITE_API_KEY_PARAM } from './site-auth.ts';
 import type { SiteRequest } from './site-auth.ts';
 
 export type Response = APIGatewayProxyStructuredResultV2;
@@ -75,11 +77,23 @@ export function httpHandler(handler: Handler): Handler {
 	};
 }
 
+export interface SiteHandlerOptions {
+	/**
+	 * Environment variables naming the SSM parameters the handler reads (e.g.
+	 * `STRIPE_SECRET_KEY_PARAM`). They're fetched together with the site key, in one SSM call.
+	 */
+	secrets?: readonly string[];
+}
+
 /** Like `httpHandler`, for routes only the website may call (see site-auth.ts). */
-export function siteHandler(handler: SiteHandler): Handler {
-	return httpHandler(async (event, context) =>
-		handler(event, await authenticateSite(event), context)
-	);
+export function siteHandler(
+	handler: SiteHandler,
+	{ secrets = [] }: SiteHandlerOptions = {}
+): Handler {
+	return httpHandler(async (event, context) => {
+		await getSecrets([SITE_API_KEY_PARAM, ...secrets].map(requireEnv));
+		return handler(event, await authenticateSite(event), context);
+	});
 }
 
 /** Throws a 429 when `allowed` is false. */

@@ -6,6 +6,7 @@
  * rather than as a broken page.
  */
 import { HURRICAST_API_KEY, HURRICAST_API_URL } from '$app/env/private';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import * as v from 'valibot';
 
 const ProductSchema = v.object({
@@ -60,6 +61,19 @@ export class ApiError extends Error {
 		super(message);
 		this.name = 'ApiError';
 	}
+}
+
+const digest = (value: string) => createHash('sha256').update(value).digest();
+
+/**
+ * Whether a request to the site came from the Hurricast API, which signs its calls back to us
+ * (e.g. cache purges) with the same shared key we send it. Constant-time.
+ */
+export function isFromHurricastApi(request: Request): boolean {
+	const provided = request.headers.get('x-api-key') ?? '';
+	return (
+		HURRICAST_API_KEY !== undefined && timingSafeEqual(digest(provided), digest(HURRICAST_API_KEY))
+	);
 }
 
 /** A short, loggable description of a failed API call. Never includes request data. */

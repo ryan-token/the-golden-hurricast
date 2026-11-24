@@ -155,6 +155,16 @@ test("Checkout's back link always returns to the merch page, uncached", async ({
 	}
 });
 
+test('only the Hurricast API can purge the cached merch page', async ({ request }) => {
+	// Sent the way the API sends it: server to server, so no Origin, with a JSON body.
+	const response = await request.post('/api/merch/purge/', {
+		headers: { 'x-api-key': 'not-the-site-key' },
+		data: {}
+	});
+	// Through SvelteKit's CSRF check (which would be a 403), then refused for the wrong key.
+	expect(response.status()).toBe(401);
+});
+
 test('unknown URLs are a 404', async ({ page }) => {
 	const response = await page.goto('/this-page-does-not-exist/');
 

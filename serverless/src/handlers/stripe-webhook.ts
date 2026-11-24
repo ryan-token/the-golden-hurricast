@@ -1,15 +1,17 @@
 import type Stripe from 'stripe';
+import { syncProduct } from '../merch/catalog-sync.ts';
 import { reconcileCheckoutSession } from '../merch/reconcile.ts';
-import { getStripe } from '../merch/stripe.ts';
+import { getStripe, STRIPE_SECRET_KEY_PARAM } from '../merch/stripe.ts';
 import { requireEnv } from '../lib/env.ts';
 import { HttpError } from '../lib/errors.ts';
 import { httpHandler, json } from '../lib/http.ts';
 import { log } from '../lib/log.ts';
-import { getSecret } from '../lib/secrets.ts';
+import { getSecrets } from '../lib/secrets.ts';
 
 /**
  * POST /stripe/webhook — Stripe event destination. Verifies the signature against the raw
- * body, then reconciles the affected order. Any failure returns 5xx so Stripe retries.
+ * body, then reconciles the affected order or re-syncs the affected product's listing. Any
+ * failure returns 5xx so Stripe retries.
  */
 export const handler = httpHandler(async (event) => {
 	const signature = event.headers['stripe-signature'];
@@ -20,10 +22,12 @@ export const handler = httpHandler(async (event) => {
 		? Buffer.from(event.body ?? '', 'base64')
 		: (event.body ?? '');
 
-	const [stripe, secret] = await Promise.all([
-		getStripe(),
-		getSecret(requireEnv('STRIPE_WEBHOOK_SECRET_PARAM'))
+	// Both secrets in one SSM call; the Stripe client is then built from the cached key.
+	const [, secret] = await getSecrets([
+		requireEnv(STRIPE_SECRET_KEY_PARAM),
+		requireEnv('STRIPE_WEBHOOK_SECRET_PARAM')
 	]);
+	const stripe = await getStripe();
 	let stripeEvent: Stripe.Event;
 	try {
 		stripeEvent = stripe.webhooks.constructEvent(payload, signature, secret);
@@ -40,6 +44,20 @@ export const handler = httpHandler(async (event) => {
 			const sessionId = stripeEvent.data.object.id;
 			log.info('Handling webhook', { eventId: stripeEvent.id, type: stripeEvent.type, sessionId });
 			await reconcileCheckoutSession(stripe, sessionId);
+			break;
+		}
+		case 'product.updated':
+		case 'product.deleted':
+		case 'price.updated': {
+			const object = stripeEvent.data.object;
+			const productId =
+				object.object === 'product'
+					? object.id
+					: typeof object.product === 'string'
+						? object.product
+						: object.product.id;
+			log.info('Handling webhook', { eventId: stripeEvent.id, type: stripeEvent.type, productId });
+			await syncProduct(stripe, productId);
 			break;
 		}
 		default:
