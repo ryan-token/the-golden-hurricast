@@ -54,5 +54,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
 		if (!response.headers.has(name)) response.headers.set(name, value);
 	}
+	// Pages Netlify's CDN caches (`cacheEpisodePage`, `cacheMerchPage`) go without an ETag, so
+	// SvelteKit never answers the CDN's revalidation with a 304. A 304 carries only
+	// `cache-control` (the browser's max-age=0, must-revalidate), and Netlify applies it to the
+	// stored copy: the copy stays stale and loses stale-while-revalidate, so every visitor waits
+	// on the function. A full 200 brings the CDN's own caching headers with it.
+	if (response.headers.has('netlify-cdn-cache-control')) response.headers.delete('etag');
 	return response;
 };

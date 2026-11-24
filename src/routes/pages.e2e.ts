@@ -155,6 +155,20 @@ test("Checkout's back link always returns to the merch page, uncached", async ({
 	}
 });
 
+test('CDN-cached pages always give the CDN a full page to store, never a 304', async ({
+	request
+}) => {
+	for (const path of ['/podcast/', '/merch/']) {
+		const first = await request.get(path);
+		// What Netlify's CDN sends when it revalidates its stored copy.
+		const revalidation = await request.get(path, {
+			headers: { 'if-none-match': first.headers().etag ?? '"stored"' }
+		});
+		expect(revalidation.status(), path).toBe(200);
+		expect(revalidation.headers()['netlify-cdn-cache-control'], path).toContain('durable');
+	}
+});
+
 test('only the Hurricast API can purge the cached merch page', async ({ request }) => {
 	// Sent the way the API sends it: server to server, so no Origin, with a JSON body.
 	const response = await request.post('/api/merch/purge/', {
