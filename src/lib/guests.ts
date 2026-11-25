@@ -308,7 +308,18 @@ export const GUEST_GROUPS: GuestGroup[] = [
 			{
 				name: 'UTSA',
 				guests: [
-					{ name: 'The Alamo Audible', url: 'https://alamoaudible.com/', appearances: ['7-8'] }
+					{
+						name: 'Adrian Bermudez',
+						role: 'Alamo Audible',
+						url: 'https://alamoaudible.com/',
+						appearances: ['7-8']
+					},
+					{
+						name: 'Jared Kalmus',
+						role: 'Alamo Audible',
+						url: 'https://alamoaudible.com/',
+						appearances: ['7-8', '9-13']
+					}
 				]
 			}
 		]
